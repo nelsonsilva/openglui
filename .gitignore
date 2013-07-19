@@ -1,0 +1,6 @@
+Makefile
+*.Makefile
+*.mk
+*.pyc
+out
+third_party

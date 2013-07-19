@@ -1,0 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "openglui/emulator/emulator_embedder.h"
+
+int main(int argc, char**argv) {
+  emulator_main(argc, argv, argv[argc-1]);
+}
+
