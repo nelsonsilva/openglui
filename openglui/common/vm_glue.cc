@@ -10,10 +10,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "bin/builtin.h"
 #include "openglui/common/extension.h"
 #include "openglui/common/log.h"
 #include "openglui/common/vm_glue.h"
 #include "include/dart_api.h"
+
+// Let's reuse dart's builtin stuff
+namespace dart {
+  namespace bin {
+  // snapshot_buffer points to a snapshot if we link in a snapshot otherwise
+  // it is initialized to NULL.
+  extern const uint8_t* snapshot_buffer;
+  }
+}
 
 char* VMGlue::extension_script_ = NULL;
 bool VMGlue::initialized_vm_ = false;
@@ -95,7 +105,7 @@ Dart_Isolate VMGlue::CreateIsolateAndSetupHelper(const char* script_uri,
                                          char** error) {
   LOGI("Creating isolate %s, %s", script_uri, main);
   Dart_Isolate isolate =
-      Dart_CreateIsolate(script_uri, main, NULL, data, error);
+      Dart_CreateIsolate(script_uri, main, dart::bin::snapshot_buffer, data, error);
   if (isolate == NULL) {
     LOGE("Couldn't create isolate: %s", *error);
     return NULL;
@@ -104,10 +114,25 @@ Dart_Isolate VMGlue::CreateIsolateAndSetupHelper(const char* script_uri,
   LOGI("Entering scope");
   Dart_EnterScope();
 
+  if (dart::bin::snapshot_buffer != NULL) {
+    // Setup the native resolver as the snapshot does not carry it.
+    dart::bin::Builtin::SetNativeResolver(dart::bin::Builtin::kBuiltinLibrary);
+    dart::bin::Builtin::SetNativeResolver(dart::bin::Builtin::kIOLibrary);
+  }
+
   // Set up the library tag handler for this isolate.
   LOGI("Setting up library tag handler");
   Dart_Handle result = CheckError(Dart_SetLibraryTagHandler(LibraryTagHandler));
   CHECK_RESULT(result);
+
+  // Load the specified application script into the newly created isolate.
+
+  // Prepare builtin and its dependent libraries for use to resolve URIs.
+  // The builtin library is part of the core snapshot and would already be
+  // available here in the case of script snapshot loading.
+  Dart_Handle builtin_lib =
+      dart::bin::Builtin::LoadAndCheckLibrary(dart::bin::Builtin::kBuiltinLibrary);
+  CHECK_RESULT(builtin_lib);
 
   Dart_ExitScope();
   return isolate;
@@ -260,10 +285,6 @@ int VMGlue::CallSetup(bool force) {
           Dart_NewStringFromCString("gl.dart")));
       Dart_Handle print = CheckError(
           Dart_GetField(library, Dart_NewStringFromCString("_printClosure")));
-      Dart_Handle corelib = CheckError(Dart_LookupLibrary(
-          Dart_NewStringFromCString("dart:core")));
-      CheckError(Dart_SetField(corelib,
-        Dart_NewStringFromCString("_printClosure"), print));
     }
     Dart_ExitScope();
     Dart_ExitIsolate();

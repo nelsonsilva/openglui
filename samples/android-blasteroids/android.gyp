@@ -49,7 +49,7 @@
             'type': 'none',
             'copies': [ {
               # TODO(gram) - this should vary based on architecture.
-              'destination': 'libs/x86',
+              'destination': 'libs/armeabi',
               'files': [
                 '<(PRODUCT_DIR)/lib.target/libandroid_embedder.so'
               ],

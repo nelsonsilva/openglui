@@ -16,8 +16,7 @@ import utils
 HOST_OS = utils.GuessOS()
 HOST_CPUS = utils.GuessCpus()
 SCRIPT_DIR = os.path.dirname(sys.argv[0])
-DART_ROOT = os.path.realpath(os.path.join(SCRIPT_DIR, '..', 'dart'))
-THIRD_PARTY_ROOT = os.path.join(DART_ROOT, 'third_party')
+THIRD_PARTY_ROOT = os.path.realpath(os.path.join(SCRIPT_DIR, '..', 'third_party'))
 
 arm_cc_error = """
 Couldn't find the arm cross compiler.
@@ -158,7 +157,10 @@ def SetCrossCompilationEnvironment(host_os, target_os, target_arch, old_path):
   os.environ['ANDROID_NDK_ROOT'] = android_ndk_root
   os.environ['ANDROID_SDK_ROOT'] = android_sdk_root
 
-  toolchain_arch = 'arm-linux-androideabi-4.6'
+  if target_arch == 'arm':
+    toolchain_arch = 'arm-linux-androideabi-4.6'
+  else:
+    toolchain_arch = 'x86-4.4.3'
   toolchain_dir = 'linux-x86'
   android_toolchain = os.path.join(android_ndk_root,
       'toolchains', toolchain_arch,
@@ -184,30 +186,62 @@ def SetCrossCompilationEnvironment(host_os, target_os, target_arch, old_path):
               ]
   os.environ['PATH'] = ':'.join(pathList)
 
+  android_target_arch = target_arch
+  if target_arch == 'ia32':
+    android_target_arch = 'x86'
+
   gypDefinesList = [
-    'target_arch=arm',
-    'armv7=0',
+    'target_arch=%s' % target_arch,
+    'android_target_arch=%s' % android_target_arch,
     'OS=%s' % target_os,
     'android_build_type=0',
+    'dart_io_support=0',
     'host_os=%s' % host_os,
     'linux_fpic=1',
     'release_optimize=s',
     'linux_use_tcmalloc=0',
-    'android_sdk=%s', os.path.join(android_sdk_root, 'platforms',
-        'android-%d' % android_sdk_version),
+    'android_sdk=%s' % os.path.join(android_sdk_root, 'platforms', 'android-%d' % android_sdk_version),
     'android_sdk_tools=%s' % android_sdk_platform_tools,
     'android_sdk_version=%s' % android_sdk_version
     ]
 
   os.environ['GYP_DEFINES'] = ' '.join(gypDefinesList)
 
-  print os.environ['GYP_DEFINES']
+  print "GYP_DEFINES = %s" % os.environ['GYP_DEFINES']
 
 def Execute(args):
   process = subprocess.Popen(args)
   process.wait()
   if process.returncode != 0:
     raise Exception(args[0] + " failed")
+
+def GClientRunHooks():
+  Execute(['gclient', 'runhooks'])
+  
+def RunhooksIfNeeded(host_os, mode, target_arch, target_os):
+  if host_os != 'linux':
+    return
+  build_root = utils.GetBuildRoot(host_os)
+  build_cookie_path = os.path.join(build_root, 'lastHooksTargetOS.txt')
+
+  old_target_os = None
+  old_target_arch = None
+  try:
+    with open(build_cookie_path) as f:
+      lines = f.readlines()
+      old_target_os = lines[0].strip()
+      old_target_arch = lines[1].strip()
+  except IOError as e:
+    pass
+  if (target_os != old_target_os) or (target_arch != old_target_arch):
+    try:
+      os.mkdir(build_root)
+    except OSError as e:
+      pass
+    with open(build_cookie_path, 'w') as f:
+      f.write(target_os + '\n')
+      f.write(target_arch + '\n')
+    GClientRunHooks()
 
 def CurrentDirectoryBaseName():
   """Returns the name of the current directory"""
@@ -322,7 +356,7 @@ def Main():
     if HOST_OS == 'macos':
       targets = ['All']
     else:
-      targets = ['openglui_samples']
+      targets = ['samples']
   else:
     targets = args
 
@@ -387,15 +421,27 @@ def Main():
             args += [target]
 
           if target_os != HOST_OS:
-            SetCrossCompilationEnvironment(
-                HOST_OS, target_os, arch, old_path)
+            SetCrossCompilationEnvironment(HOST_OS, target_os, arch, old_path)
+          else:
+            gypDefinesList = ['target_arch=%s' % arch]
+            os.environ['GYP_DEFINES'] = ' '.join(gypDefinesList)
 
-          #RunhooksIfNeeded(HOST_OS, mode, arch, target_os)
+          RunhooksIfNeeded(HOST_OS, mode, arch, target_os)
 
           toolchainprefix = None
           if target_os == 'android':
-            toolchainprefix = ('%s/arm-linux-androideabi'
-                                % os.environ['ANDROID_TOOLCHAIN'])
+            if arch == 'ia32':
+              toolchainprefix = ('%s/i686-linux-android' % os.environ['ANDROID_TOOLCHAIN'])
+
+            if arch == 'arm':
+              toolchainprefix = ('%s/arm-linux-androideabi' % os.environ['ANDROID_TOOLCHAIN'])
+
+
+            sysroot = os.environ['ANDROID_NDK_ROOT'] + "/platforms/android-14/arch-arm";
+            args.append(  "CFLAGS=--sysroot=" + sysroot)
+            args.append(  "CXXFLAGS=-Ithird_party/dart/third_party/android_tools/ndk/sources/cxx-stl/stlport/stlport/ --sysroot=" + sysroot)
+            args.append(  "LDFLAGS=--sysroot=" + sysroot)
+
           toolsOverride = SetTools(arch, toolchainprefix)
           if toolsOverride:
             printToolOverrides = target_os != 'android'
@@ -410,7 +456,6 @@ def Main():
                 print "Couldn't find compiler: %s" % toolsOverride['CC.target']
               return 1
 
-          print ' '.join(args)
           process = None
           if filter_xcodebuild_output:
             process = subprocess.Popen(args,

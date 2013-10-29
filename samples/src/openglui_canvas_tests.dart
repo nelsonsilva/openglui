@@ -503,7 +503,7 @@ void loadImage() {
   // Setting src before onLoad is a more interesting test.
   imageObj.src = 'chrome.png';
   imageObj.onLoad.listen((e) {
-    ctx.drawImage(e.target, 0, 0, width, height, 0, 0, width, height);
+    ctx.drawImageScaledFromSource(e.target, 0, 0, width, height, 0, 0, width, height);
   });
 }
 

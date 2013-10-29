@@ -2943,7 +2943,7 @@ void drawScaledImage(CanvasRenderingContext2D ctx, ImageElement image,
  */
 void renderImage(CanvasRenderingContext2D ctx, ImageElement image,
                  num nx, num ny, num ns, num x, num y, num s) {
-  print("renderImage(_,$nx,$ny,$ns,$ns,$x,$y,$s,$s)");
+  //print("renderImage(_,$nx,$ny,$ns,$ns,$x,$y,$s,$s)");
   ctx.drawImageScaledFromSource(image, nx, ny, ns, ns, x, y, s, s);
 
   if (x < 0) {
@@ -3007,7 +3007,7 @@ void renderImageRotated(CanvasRenderingContext2D ctx, ImageElement image,
 
 void renderImageRotated2(CanvasRenderingContext2D ctx, ImageElement image,
                         num x, num y, num w, num h, num r) {
-  print("Rendering rotated sprite ${image.src} to dest $x,$y");
+  //print("Rendering rotated sprite ${image.src} to dest $x,$y");
   var w2 = w*0.5, h2 = h*0.5;
   var rf = (tx, ty) {
     ctx.save();

@@ -23,8 +23,8 @@ GraphicsHandler::GraphicsHandler(const char* resource_path)
 
 void GraphicsHandler::DecoderHack(int x, SkStream* s) {
   if (x) {  // hack to keep the linker from throwing these out
-    extern SkImageDecoder* sk_libpng_dfactory(SkStream* s);
-    sk_libpng_dfactory(s);
+    //extern SkImageDecoder* sk_libpng_dfactory(SkStream* s);
+    //sk_libpng_dfactory(s);
 
     // TODO(gram): For some reason I get linker errors on these, even though
     // they are defined in libskia_images. Figure out why...
@@ -94,8 +94,8 @@ SkCanvas* GraphicsHandler::CreateDisplayCanvas() {
 
 SkCanvas* GraphicsHandler::CreateBitmapCanvas(int width, int height) {
   LOGI("Creating %dx%d bitmap canvas", width, height);
-  SkDevice* rasterDevice =
-      new SkDevice(SkBitmap::kARGB_8888_Config, width, height);
+  SkBaseDevice* rasterDevice =
+      new SkBitmapDevice(SkBitmap::kARGB_8888_Config, width, height);
   SkCanvas* canvas = new SkCanvas(rasterDevice);
   rasterDevice->unref();
   return canvas;

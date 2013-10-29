@@ -22,7 +22,7 @@
                 'action_name': 'build_app',
                 'inputs': [
                   '<(PRODUCT_DIR)/lib.target/libandroid_embedder.so',
-                  '../../embedders/openglui/common/gl.dart',
+                  '../../openglui/common/gl.dart',
                   '../src/openglui_canvas_tests.dart'
                 ],
                 'outputs': [
@@ -37,7 +37,7 @@
             'type': 'none',
             'copies': [ {
               # TODO(gram) - this should vary based on architecture.
-              'destination': 'libs/x86',
+              'destination': 'libs/armeabi',
               'files': [
                 '<(PRODUCT_DIR)/lib.target/libandroid_embedder.so'
               ],

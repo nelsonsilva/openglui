@@ -349,7 +349,7 @@ void CanvasState::SetFillGradient(bool is_radial,
     fillShader_ = CreateLinearGradient(x0, y0, x1, y1,
         stops, positions, colors);
   }
-  fillShader_->validate();
+  //fillShader_->validate();
 }
 
 void CanvasState::SetStrokeGradient(bool is_radial,
@@ -366,7 +366,7 @@ void CanvasState::SetStrokeGradient(bool is_radial,
     strokeShader_ = CreateLinearGradient(x0, y0, x1, y1,
         stops, positions, colors);
   }
-  strokeShader_->validate();
+  //strokeShader_->validate();
 }
 
 SkShader* CanvasState::CreateRadialGradient(

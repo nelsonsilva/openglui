@@ -312,7 +312,7 @@ class CanvasContext {
   }
 
   inline const SkBitmap* GetBitmap() {
-    SkDevice* device = canvas_->getDevice();
+    SkBaseDevice* device = canvas_->getDevice();
     return &device->accessBitmap(false);
   }
 };

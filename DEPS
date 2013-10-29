@@ -12,7 +12,7 @@ vars = {
   "co19_repo": "http://co19.googlecode.com/svn/trunk/co19/",
 
   "skia_branch": "/trunk",
-  "skia_rev": "@11429",
+  "skia_rev": "@11999",
 }
 
 deps = {
@@ -68,7 +68,7 @@ deps_os = {
     "openglui/third_party/skia/platform_tools/android/third_party/externals/jpeg" : "https://android.googlesource.com/platform/external/jpeg.git@android-4.2.2_r1.2",
 
     # dart
-    "openglui/third_party/dart/third_party//android_tools":
+    "openglui/third_party/android_tools":
       Var("chromium_git") + "/android_tools.git" +
       "@ebd740fc3d55dda34d9322c8c5f7749302734325",
   },
@@ -77,10 +77,6 @@ deps_os = {
 hooks = [
   {
     "pattern": ".",
-    "action": ["python", "openglui/third_party/dart/tools/compiler_scripts/generate_my_projects.py"],
-  },
-  {
-    "pattern": ".",
-    "action": ["python", "openglui/tools/generate_projects.py", "."],
+    "action": ["python", "openglui/tools/generate_projects.py", "samples"],
   },
 ]

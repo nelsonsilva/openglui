@@ -29,6 +29,7 @@ while [ ! -z "$1" ] ; do
     ;;
     "--arm")
       TARGET_ARCH=arm
+      DEVICE_ID=arm_v7
       DO_ANDROID=1
     ;;
     "--x86")
@@ -56,24 +57,22 @@ while [ ! -z "$1" ] ; do
   shift
 done
 
+export SKIA_OUT="out"
+
 pushd "$BASE_DIR/third_party/skia"
 
 if [ ${DO_ANDROID} != 0 ] ; then
   echo "Building for Android ${TARGET_ARCH}"
-  curl http://skia.googlecode.com/svn/trunk/platform_tools/android/gclient.config -o .gclient
-  gclient sync
 
   export ANDROID_SDK_ROOT=`readlink -f ../android_tools/sdk`
   export GSUTIL_LOCATION=`readlink -f ../gsutil`
-
-  cd trunk
 
   echo "Using SDK ${ANDROID_SDK_ROOT}"
   if [ ${CLEAN} != 0 ] ; then
     ./platform_tools/android/bin/android_make -d $TARGET_ARCH -j clean
   else
-    echo env -i BUILDTYPE=$BUILD ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" PATH="${PATH}:${GSUTIL_LOCATION}" ../android/bin/android_make BUILDTYPE=$BUILD -d $TARGET_ARCH -j --debug=j
-    env -i BUILDTYPE=$BUILD ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" PATH="${PATH}:${GSUTIL_LOCATION}" ./platform_tools/android/bin/android_make BUILDTYPE=$BUILD -d $TARGET_ARCH -j --debug=j
+    echo env -i BUILDTYPE=$BUILD ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" PATH="${PATH}:${GSUTIL_LOCATION}" DEVICE_ID="${DEVICE_ID}" ../android/bin/android_make BUILDTYPE=$BUILD -d $TARGET_ARCH -j --debug=j
+    env -i BUILDTYPE=$BUILD ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" PATH="${PATH}:${GSUTIL_LOCATION}" DEVICE_ID="${DEVICE_ID}" ./platform_tools/android/bin/android_make BUILDTYPE=$BUILD -d $TARGET_ARCH -j --debug=j
   fi
 
 else
@@ -91,6 +90,10 @@ else
   # freeglut3-dev
 
   SKIA_INSTALLDIR=`pwd`
+
+  python gyp_skia
+
+  pushd $SKIA_OUT
 
   if [ ${CLEAN} != 0 ] ; then
     echo 'Cleaning'

@@ -14,7 +14,7 @@ import 'gl.dart';
 import 'dart:math' as Math;
 import 'dart:typed_data';
 
-RenderingContext gl = null;
+var gl = null;
 
 // Note: The first line of the fragment shader ("precision mediump float")
 // is not portable. It is required for WebGL and OpenGL ES. Desktop OpenGL

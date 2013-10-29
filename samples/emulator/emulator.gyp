@@ -99,7 +99,7 @@
               'ldflags': [
                 '-Wall',
                 # TODO(gram): handle release mode.
-                '-Lthird_party/skia/trunk/out/Debug',
+                '-Lthird_party/skia/out/Release',
               ],
              },
            }

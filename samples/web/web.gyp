@@ -7,6 +7,9 @@
 # a .png file with some other tool.
 
 {
+   'variables': {
+    'target_arch%': 'ia32',
+  },
   'targets': [
     {
       'target_name': 'assets',
