@@ -1,0 +1,37 @@
+box: wercker/default
+build:
+    steps:
+        - install-packages:
+            packages: subversion libfreetype6 libfreetype6-dev libfontconfig libfontconfig-dev libpng12-0 libpng12-dev libgif-dev libglu1-mesa-dev mesa-common-dev freeglut3-dev
+        - script:
+            name : move source
+            code : |-
+                mkdir -p "$WERCKER_PIPELINE_DIR/openglui"
+                mv $WERCKER_SOURCE_DIR "$WERCKER_PIPELINE_DIR/openglui/openglui"
+                export WERCKER_SOURCE_DIR="$WERCKER_PIPELINE_DIR/openglui/openglui"
+        - script:
+            name: Populate third_party cache
+            code: |-
+                if test -d "$WERCKER_CACHE_DIR/openglui-third_party-cache"; then rsync -avzv "$WERCKER_CACHE_DIR/openglui-third_party-cache" "$WERCKER_SOURCE_DIR/third_party/" ; fi
+        - script:
+            name: gclient sync
+            code: |-
+                pushd ..
+                git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+                export PATH="$PATH":`pwd`/depot_tools
+                gclient config https://github.com/nelsonsilva/openglui.git
+                echo "target_os = ['android']" >> .gclient
+                gclient sync
+                popd
+        - script:
+            name: build mobile_emulator
+            code: |-
+                tools/build.py -m release -a x64 mobile_emulator
+        - script:
+            name: build samples
+            code: |-
+                tools/build.py -m release -a arm --os=android samples
+        - script:
+            name: Store third_party cache
+            code: |-
+                rsync -avzv "$WERCKER_SOURCE_DIR/third_party" "$WERCKER_CACHE_DIR/openglui-third_party-cache/"
