@@ -21,10 +21,10 @@ GraphicsHandler::GraphicsHandler(const char* resource_path)
   DecoderHack(0, NULL);
 }
 
-void GraphicsHandler::DecoderHack(int x, SkStream* s) {
+void GraphicsHandler::DecoderHack(int x, SkStreamRewindable* s) {
   if (x) {  // hack to keep the linker from throwing these out
-    //extern SkImageDecoder* sk_libpng_dfactory(SkStream* s);
-    //sk_libpng_dfactory(s);
+    extern SkImageDecoder* sk_libpng_dfactory(SkStreamRewindable* s);
+    sk_libpng_dfactory(s);
 
     // TODO(gram): For some reason I get linker errors on these, even though
     // they are defined in libskia_images. Figure out why...

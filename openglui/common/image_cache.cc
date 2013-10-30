@@ -77,14 +77,14 @@ SkBitmap* ImageCache::Load(const char* src_url) {
     // SkStream here we can produce better error log messages.
     bm = new SkBitmap();
     if (!SkImageDecoder::DecodeStream(&stream, bm)) {
-      LOGI("Image decode of %s failed", path);
+      LOGE("Image decode of %s failed", path);
       return NULL;
     } else {
       LOGI("Decode image %s: width=%d,height=%d",
           path, bm->width(), bm->height());
     }
   } else {
-    LOGI("Path %s is invalid", path);
+    LOGE("Path %s is invalid", path);
   }
 
   if (path != filepath) {

@@ -62,7 +62,8 @@
       },
     },  # configurations
     'cflags': [ '-Wno-abi', '-Wall', '-W', '-Wno-unused-parameter',
-                '-Wnon-virtual-dtor', '-fno-rtti', '-fno-exceptions', ],
+                '-Wnon-virtual-dtor', '-fno-rtti', '-fno-exceptions',
+                '-Wno-conversion-null', '-Woverloaded-virtual'],
     'target_conditions': [
       ['_toolset=="target"', {
         'cflags!': [

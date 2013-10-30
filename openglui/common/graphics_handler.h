@@ -12,7 +12,7 @@
 
 class GraphicsHandler : public ISized {
   private:
-    void DecoderHack(int x, SkStream* s);
+    void DecoderHack(int x, SkStreamRewindable* s);
 
   public:
     explicit GraphicsHandler(const char* resource_path);

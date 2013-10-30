@@ -61,7 +61,7 @@ VMGlue::VMGlue(ISized* surface,
 
 Dart_Handle VMGlue::CheckError(Dart_Handle handle) {
   if (Dart_IsError(handle)) {
-    LOGE("Unexpected Error Handle", Dart_GetError(handle));
+    LOGE("Unexpected Error Handle: %s", Dart_GetError(handle));
     Dart_PropagateError(handle);
   }
   return handle;
@@ -281,10 +281,10 @@ int VMGlue::CallSetup(bool force) {
       // Plug in the print handler. It would be nice if we could do this
       // before calling setup, but the call to GetField blows up if we
       // haven't run anything yet.
-      Dart_Handle library = CheckError(Dart_LookupLibrary(
-          Dart_NewStringFromCString("gl.dart")));
-      Dart_Handle print = CheckError(
-          Dart_GetField(library, Dart_NewStringFromCString("_printClosure")));
+      //Dart_Handle library = CheckError(Dart_LookupLibrary(
+      //    Dart_NewStringFromCString("gl.dart")));
+      //Dart_Handle print = Dart_GetField(library, Dart_NewStringFromCString("_printClosure"));
+      //CheckError(print);
     }
     Dart_ExitScope();
     Dart_ExitIsolate();
