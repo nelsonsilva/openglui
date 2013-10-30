@@ -1,0 +1,27 @@
+language: cpp
+compiler:
+  - gcc
+before_install:
+ - sudo apt-get install -qq libfreetype6 libfreetype6-dev libfontconfig libfontconfig-dev libpng12-0 libpng12-dev libgif-dev libglu1-mesa-dev mesa-common-dev freeglut3-dev
+install:
+  - pushd ..
+  - git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+  - export PATH="$PATH":`pwd`/depot_tools
+  - gclient config https://github.com/nelsonsilva/openglui.git
+  - echo "target_os = ['android']" >> .gclient
+  - gclient sync
+  - popd
+script:
+  - tools/build.py -m release -a x64 mobile_emulator
+  - tools/build.py -m release -a arm --os=android samples
+cache:
+  apt: true
+  directories:
+  - openglui/third_party
+  - depot_tools
+notifications:
+  recipients:
+    - nelson.silva@gmail.com
+  email:
+    on_success: change
+    on_failure: always
