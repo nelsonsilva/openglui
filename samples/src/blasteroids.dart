@@ -15,6 +15,7 @@
 library asteroids;
 
 import 'dart:math' as Math;
+import 'dart:math' show Rectangle;
 import 'gl.dart';
 
 const RAD = Math.PI / 180.0;
@@ -48,6 +49,12 @@ class Key {
   static const R = 82;
   static const S = 83;
   static const Z = 90;
+  static const NUM_0 = 48;
+  static const NUM_2 = 50;
+  static const NUM_4 = 52;
+  static const NUM_5 = 53;
+  static const NUM_6 = 54;
+  static const NUM_8 = 56;
 }
 
 // Globals
@@ -421,9 +428,9 @@ class PowerUp extends EffectActor {
       case 0:
       case 1:
         message = "Energy Boost!";
-        player.energy += player.ENERGY_INIT / 2;
-        if (player.energy > player.ENERGY_INIT) {
-          player.energy = player.ENERGY_INIT;
+        player.energy += Player.ENERGY_INIT / 2;
+        if (player.energy > Player.ENERGY_INIT) {
+          player.energy = Player.ENERGY_INIT;
         }
         break;
 
@@ -1273,24 +1280,24 @@ class GameScene extends Scene {
       // which is not what we want. So we have some special
       // numeric key handlers here that are distinct for
       // up and down to support use with GLUT.
-      case 52: // '4':
+      case Key.NUM_4:
       case Key.LEFT:
         input.left = true;
         return true;
-      case 54: // '6'
+      case Key.NUM_6:
       case Key.RIGHT:
         input.right = true;
         return true;
-      case 56: // '8'
+      case Key.NUM_8:
       case Key.UP:
         input.thrust = true;
         return true;
-      case 50: // '2'
+      case Key.NUM_2:
       case Key.DOWN:
       case Key.SHIFT:
         input.shield = true;
         return true;
-      case 48: // '0'
+      case Key.NUM_0:
       case Key.SPACE:
         input.fireA = true;
         return true;
@@ -1336,7 +1343,7 @@ class GameScene extends Scene {
 
   bool onKeyUpHandler(int keyCode) {
     switch (keyCode) {
-      case 53: // '5'
+      case Key.NUM_5:
         input.left = false;
         input.right = false;
         input.thrust = false;
@@ -1890,18 +1897,18 @@ class BulletX2 extends Bullet {
     if (frameStart - start > 40) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = fadeValue(1.0, FADE_LENGTH);
+      ctx.globalAlpha = fadeValue(1.0, Bullet.FADE_LENGTH);
       // rotate the bullet bitmap into the correct heading
       ctx.translate(position.x, position.y);
       ctx.rotate(heading * RAD);
       ctx.drawImage(GameHandler.bitmaps.images["bulletx2"],
-           -(BULLET_WIDTH + GLOWSHADOWBLUR*4) / 2,
-           -(BULLET_HEIGHT + GLOWSHADOWBLUR*2) / 2);
+           -(Bullet.BULLET_WIDTH + GLOWSHADOWBLUR*4) / 2,
+           -(Bullet.BULLET_HEIGHT + GLOWSHADOWBLUR*2) / 2);
       ctx.restore();
     }
   }
 
-  get radius => BULLET_HEIGHT;
+  get radius => Bullet.BULLET_HEIGHT;
 }
 
 class Bomb extends Bullet {
@@ -2931,8 +2938,8 @@ void centerFillText(CanvasRenderingContext2D g, String txt, String font, num y,
 
 void drawScaledImage(CanvasRenderingContext2D ctx, ImageElement image,
                  num nx, num ny, num ns, num x, num y, num s) {
-  ctx.drawImageToRect(image, new Rect(x, y, s, s),
-      sourceRect: new Rect(nx, ny, ns, ns));
+  ctx.drawImageToRect(image, new Rectangle(x, y, s, s),
+      sourceRect: new Rectangle(nx, ny, ns, ns));
 }
 /**
  * This method will automatically correct for objects moving on/off

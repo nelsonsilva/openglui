@@ -4,6 +4,8 @@
 
 library android_extension;
 import 'dart:async';
+import 'dart:math' show Rectangle;
+import 'dart:typed_data';
 
 // A VERY simplified DOM.
 
@@ -17,7 +19,7 @@ class BodyElement {
 
 typedef void RequestAnimationFrameCallback(num highResTime);
 
-class Window {
+class Window extends EventTarget {
   static int _nextId = 0;
   List _callbacks;
   List _arguments;
@@ -64,6 +66,8 @@ class Window {
   }
 
   Map localStorage = {};  // TODO(gram) - Make this persistent.
+
+  Stream<DeviceMotionEvent> get onDeviceMotion => new _EventStream(this, 'devicemotion');
 }
 
 Window window = new Window._internal();
@@ -157,7 +161,7 @@ class KeyboardEvent extends Event {
   final bool shiftKey;
   final int keyCode;
 
-  KeyboardEvent(String type, int keycode, bool alt, bool ctrl, bool shift) 
+  KeyboardEvent(String type, int keycode, bool alt, bool ctrl, bool shift)
     : super(type),
       keyCode = keycode,
       altKey = alt,
@@ -179,6 +183,26 @@ class MouseEvent extends Event {
   }
 }
 
+class DeviceAcceleration  {
+  double x, y, z;
+  DeviceAcceleration(this.x, this.y, this.z);
+}
+
+class DeviceMotionEvent extends Event {
+  DeviceAcceleration _acceleration;
+
+  double interval = 1000.0 / 60.0; // 60 FPS
+
+  DeviceMotionEvent(String type, double x, double y, double z)
+    : super(type),
+      _acceleration = new DeviceAcceleration(x, y, z);
+
+  DeviceAcceleration get acceleration => _acceleration;
+
+  DeviceAcceleration get accelerationIncludingGravity =>
+      throw new Exception('Unimplemented accelerationIncludingGravity');
+}
+
 class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
   int _pauseCount = 0;
   EventTarget _target;
@@ -189,7 +213,7 @@ class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
     _tryResume();
   }
 
-  void cancel() {
+  Future cancel() {
     if (_canceled) {
       throw new StateError("Subscription has been canceled.");
     }
@@ -198,6 +222,8 @@ class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
     // Clear out the target to indicate this is complete.
     _target = null;
     _onData = null;
+
+    return null;
   }
 
   bool get _canceled => _target == null;
@@ -209,7 +235,7 @@ class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
     // Remove current event listener.
     _unlisten();
 
-    _onData = handleData
+    _onData = handleData;
     _tryResume();
   }
 
@@ -231,13 +257,13 @@ class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
     }
   }
 
-  bool get _paused => _pauseCount > 0;
+  bool get isPaused => _pauseCount > 0;
 
   void resume() {
     if (_canceled) {
       throw new StateError("Subscription has been canceled.");
     }
-    if (!_paused) {
+    if (!isPaused) {
       throw new StateError("Subscription is not paused.");
     }
     --_pauseCount;
@@ -245,7 +271,7 @@ class _EventStreamSubscription<T extends Event> extends StreamSubscription<T> {
   }
 
   void _tryResume() {
-    if (_onData != null && !_paused) {
+    if (_onData != null && !isPaused) {
       _target.addListener(_eventType, _onData);
     }
   }
@@ -270,7 +296,7 @@ class _EventStream<T extends Event> extends Stream<T> {
   _EventStream(this._target, this._eventType);
 
   // DOM events are inherently multi-subscribers.
-  Stream<T> asBroadcastStream() => this;
+  Stream<T> asBroadcastStream({onListen, onCancel}) => this;
   bool get isBroadcast => true;
 
   StreamSubscription<T> listen(void onData(T event),
@@ -330,12 +356,15 @@ onMouseMove_(int when, double x, double y) =>
 onMouseUp_(int when, double x, double y) =>
     _dispatchMouseEvent('mouseup', x, y);
 
+onAccelerometer(double x, double y, double z) =>
+    window.dispatchEvent(new DeviceMotionEvent('devicemotion', x, y, z));
+
 class CanvasElement extends Node {
   int height;
   int width;
 
   CanvasRenderingContext2D _context2d;
-  WebGLRenderingContext _context3d;
+  RenderingContext _context3d;
 
   // For use with drawImage, we want to support a src property
   // like ImageElement, which maps to the context handle in native
@@ -355,15 +384,15 @@ class CanvasElement extends Node {
         _context2d = new CanvasRenderingContext2D(this, width, height);
       }
       return _context2d;
-    } else if (contextId == "webgl" || 
+    } else if (contextId == "webgl" ||
                contextId == "experimental-webgl") {
       if (_context3d == null) {
-        _context3d = new WebGLRenderingContext(this);
+        _context3d = new RenderingContext(this);
       }
       return _context3d;
     }
   }
- 
+
   String toDataUrl(String type) {
     // This needs to take the contents of the underlying
     // canvas painted by the 2d context, give that a unique
@@ -473,8 +502,9 @@ int glVertexShader() native "GLVertexShader";
 String glGetShaderInfoLog(int shader) native "GLGetShaderInfoLog";
 String glGetProgramInfoLog(int program) native "GLGetProgramInfoLog";
 
-class WebGLRenderingContext extends CanvasRenderingContext {
-  WebGLRenderingContext(canvas) : super(canvas);
+// TODO(nfgs): Move this to web_gl library
+class RenderingContext extends CanvasRenderingContext {
+  RenderingContext(canvas) : super(canvas);
 
   static get ARRAY_BUFFER => glArrayBuffer();
   static get COLOR_BUFFER_BIT => glColorBufferBit();
@@ -493,7 +523,7 @@ class WebGLRenderingContext extends CanvasRenderingContext {
 
   attachShader(program, shader) => glAttachShader(program, shader);
   bindBuffer(target, buffer) => glBindBuffer(target, buffer);
-  bufferData(target, data, usage) => glBufferData(target, data, usage);
+  bufferDataTyped(target, data, usage) => glBufferData(target, data, usage);
   clearColor(r, g, b, alpha) => glClearColor(r, g, b, alpha);
   clearDepth(depth) => glClearDepth(depth);
   clear(mask) => glClear(mask);
@@ -571,15 +601,6 @@ get _printClosure => (s) {
 };
 
 //------------------------------------------------------------------
-// Temp hack for compat with WebGL.
-
-class Float32Array extends List<double> {
-  Float32Array.fromList(List a) {
-    addAll(a);
-  }
-}
-
-//------------------------------------------------------------------
 // 2D canvas support
 
 int _SetWidth(int handle, int width)
@@ -620,7 +641,7 @@ String _SetTextBaseline(int handle, String baseline)
 _GetBackingStorePixelRatio(int handle)
     native "C2DGetBackingStorePixelRatio";
 void _SetImageSmoothingEnabled(int handle, bool ise)
-    native "C2DSetImageSmoothingEnabled";    
+    native "C2DSetImageSmoothingEnabled";
 void _SetLineDash(int handle, List v)
     native "C2DSetLineDash";
 _SetLineDashOffset(int handle, int v)
@@ -630,11 +651,11 @@ void _Arc(int handle, double x, double y, double radius,
     native "C2DArc";
 void _ArcTo(int handle, double x1, double y1,
               double x2, double y2, double radius)
-    native "C2DArcTo"; 
+    native "C2DArcTo";
 void _ArcTo2(int handle, double x1, double y1,
                double x2, double y2, double radiusX,
     double radiusY, double rotation)
-    native "C2DArcTo2"; 
+    native "C2DArcTo2";
 void _BeginPath(int handle)
     native "C2DBeginPath";
 void _BezierCurveTo(int handle, double cp1x, double cp1y,
@@ -661,7 +682,7 @@ void _FillRect(int handle, double x, double y, double w, double h)
 void _FillText(int handle, String text, double x, double y, double maxWidth)
     native "C2DFillText";
 ImageData _GetImageData(num sx, num sy, num sw, num sh)
-    native "C2DGetImageData";    
+    native "C2DGetImageData";
 void _LineTo(int handle, double x, double y)
     native "C2DLineTo";
 double _MeasureText(int handle, String text)
@@ -669,7 +690,7 @@ double _MeasureText(int handle, String text)
 void _MoveTo(int handle, double x, double y)
     native "C2DMoveTo";
 void _PutImageData(int handle, ImageData imagedata, double dx, double dy)
-    native "C2DPutImageData";    
+    native "C2DPutImageData";
 void _QuadraticCurveTo(int handle, double cpx, double cpy,
     double x, double y)
         native "C2DQuadraticCurveTo";
@@ -689,7 +710,7 @@ void _SetTransform(int handle, double m11, double m12,
 void _Stroke(int handle)
     native "C2DStroke";
 void _StrokeRect(int handle, double x, double y, double w, double h)
-    native "C2DStrokeRect";    
+    native "C2DStrokeRect";
 void _StrokeText(int handle, String text, double x, double y,
     double maxWidth)
         native "C2DStrokeText";
@@ -720,6 +741,10 @@ int _GetImageWidth(String url)
 int _GetImageHeight(String url)
     native "C2DGetImageHeight";
 
+class CanvasPattern {
+  CanvasPattern() { throw new Exception('CanvasPattern'); }
+}
+
 class CanvasGradient {
   num _x0, _y0, _r0 = 0, _x1, _y1, _r1 = 0;
   bool _isRadial;
@@ -733,7 +758,7 @@ class CanvasGradient {
 
   CanvasGradient.linear(this._x0, this._y0, this._x1, this._y1)
       : _isRadial = false;
-  
+
   CanvasGradient.radial(this._x0, this._y0, this._r0,
                         this._x1, this._y1, this._r1)
       : _isRadial = true;
@@ -795,7 +820,7 @@ class ImageElement extends Node {
 }
 
 class ImageData {
-  final Uint8ClampedArray data;
+  final Uint8ClampedList data;
   final int height;
   final int width;
   ImageData(this.height, this.width, this.data);
@@ -810,11 +835,6 @@ void shutdown() {
   CanvasRenderingContext2D.next_handle = 0;
 }
 
-class Rect {
-  final num top, left, width, height;
-  const Rect(this.left, this.top, this.width, this.height);
-}
-
 class CanvasRenderingContext2D extends CanvasRenderingContext {
   // TODO(gram): We need to support multiple contexts, for cached content
   // prerendered to an offscreen buffer. For this we will use handles, with
@@ -824,9 +844,9 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
   get handle => _handle;
 
   int _width, _height;
-  set width(int w) { _width = SetWidth(_handle, w); }
+  set width(int w) { _width = _SetWidth(_handle, w); }
   get width => _width;
-  set height(int h) { _height = SetHeight(_handle, h); }
+  set height(int h) { _height = _SetHeight(_handle, h); }
   get height => _height;
 
   CanvasRenderingContext2D(canvas, width, height) : super(canvas) {
@@ -904,7 +924,7 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
   get shadowColor => _shadowColor;
   set shadowColor(String color) =>
       _SetShadowColor(_handle, _shadowColor = color);
-  
+
   num _shadowOffsetX;
   get shadowOffsetX => _shadowOffsetX;
   set shadowOffsetX(num offset) {
@@ -944,10 +964,7 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
   bool _webkitImageSmoothingEnabled;
   get webkitImageSmoothingEnabled => _webkitImageSmoothingEnabled;
   set webkitImageSmoothingEnabled(bool v) =>
-     _SetImageSmoothingEnabled(_webkitImageSmoothingEnabled = v);
-
-  get webkitLineDash => lineDash;
-  set webkitLineDash(List v) => lineDash = v;
+     _SetImageSmoothingEnabled(_handle, _webkitImageSmoothingEnabled = v);
 
   get webkitLineDashOffset => lineDashOffset;
   set webkitLineDashOffset(num v) => lineDashOffset = v;
@@ -1031,7 +1048,7 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
       _DrawImage(_handle, element.src, 0, 0, false, w, h,
                    x1.toInt(), y1.toInt(), true, w1.toInt(), h1.toInt());
     } else {  // drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
-      _DrawImage(_handle, element.src, 
+      _DrawImage(_handle, element.src,
                    x1.toInt(), y1.toInt(), true, w1.toInt(), h1.toInt(),
                    x2.toInt(), y2.toInt(), true, w2.toInt(), h2.toInt());
     }
@@ -1053,7 +1070,7 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
         destX, destY, destWidth, destHeight);
   }
 
-  void drawImageToRect(source, Rect dest, {Rect sourceRect}) {
+  void drawImageToRect(source, Rectangle dest, {Rectangle sourceRect}) {
     if (sourceRect == null) {
       _drawImage(source, dest.left, dest.top, dest.width, dest.height);
     } else {

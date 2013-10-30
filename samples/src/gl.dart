@@ -10,6 +10,7 @@
 library gl_html;
 
 import 'dart:html' as html;
+import 'dart:math' show Rectangle;
 export 'dart:web_gl' show RenderingContext;
 export 'dart:html' show ImageElement;
 export 'dart:html' show CanvasElement;
@@ -18,7 +19,7 @@ export 'dart:html' show KeyboardEvent;
 export 'dart:html' show MouseEvent;
 export 'dart:html' show HtmlDocument;
 export 'dart:html' show CanvasRenderingContext2D;
-export 'dart:html' show Rect;
+export 'dart:math' show Rectangle;
 
 get document => html.document;
 get window => html.window;
