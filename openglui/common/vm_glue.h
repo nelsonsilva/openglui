@@ -11,6 +11,11 @@
 #include "openglui/common/isized.h"
 #include "include/dart_api.h"
 
+static const int DEFAULT_DEBUG_PORT = 5858;
+static const char* DEFAULT_DEBUG_IP = "127.0.0.1";
+
+static const int DEFAULT_VM_SERVICE_SERVER_PORT = 8181;
+
 class VMGlue {
  public:
   explicit VMGlue(ISized* surface,
@@ -24,6 +29,8 @@ class VMGlue {
   }
 
   int InitializeVM();
+  void EnableDebugger(const char * ip = DEFAULT_DEBUG_IP, int port = DEFAULT_DEBUG_PORT);
+  void EnableVMService(int port = DEFAULT_VM_SERVICE_SERVER_PORT);
   int StartMainIsolate();
   int CallSetup(bool force = false);
   int CallUpdate();
@@ -65,6 +72,7 @@ class VMGlue {
 
   static bool initialized_vm_;
   static char* extension_script_;
+
   ISized* surface_;
   Dart_Isolate isolate_;
   bool initialized_script_;
@@ -72,6 +80,13 @@ class VMGlue {
   float x_, y_, z_;  // Last values from accelerometer.
   bool accelerometer_changed_;
   int setup_flag_;
+
+  bool debugger_start;
+  int debugger_port;
+  const char * debugger_ip;
+
+  bool vm_service_start;
+  int vm_service_server_port;
 };
 
 #endif  // OPENGLUI_COMMON_VM_GLUE_H_

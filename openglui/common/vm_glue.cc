@@ -11,25 +11,30 @@
 #include <unistd.h>
 
 #include "bin/builtin.h"
+#include "bin/dbg_connection.h"
+#include "bin/eventhandler.h"
+#include "bin/vmservice_impl.h"
+
 #include "openglui/common/extension.h"
 #include "openglui/common/log.h"
 #include "openglui/common/vm_glue.h"
+
 #include "include/dart_api.h"
+#include "include/dart_debugger_api.h"
 
 // Let's reuse dart's builtin stuff
 namespace dart {
   namespace bin {
-  // snapshot_buffer points to a snapshot if we link in a snapshot otherwise
-  // it is initialized to NULL.
-  extern const uint8_t* snapshot_buffer;
+    // snapshot_buffer points to a snapshot if we link in a snapshot otherwise
+    // it is initialized to NULL.
+    extern const uint8_t* snapshot_buffer;
+
+    bool trace_debug_protocol = false;
   }
 }
 
 char* VMGlue::extension_script_ = NULL;
 bool VMGlue::initialized_vm_ = false;
-
-// snapshot_buffer points to a snapshot if we link in a snapshot otherwise
-// it is initialized to NULL.
 
 VMGlue::VMGlue(ISized* surface,
                const char* script_path,
@@ -43,7 +48,12 @@ VMGlue::VMGlue(ISized* surface,
       y_(0.0),
       z_(0.0),
       accelerometer_changed_(false),
-      setup_flag_(setup_flag) {
+      setup_flag_(setup_flag),
+      debugger_start(false),
+      debugger_port(-1),
+      debugger_ip(NULL),
+      vm_service_start(false),
+      vm_service_server_port(-1) {
   LOGI("Creating VMGlue");
   if (main_script == NULL) {
     main_script = "main.dart";
@@ -237,10 +247,41 @@ Dart_Handle VMGlue::LoadSourceFromFile(const char* url) {
   return contents;
 }
 
+void VMGlue::EnableDebugger(const char * ip, int port) {
+  debugger_start = true;
+  if (ip != NULL) debugger_ip = ip;
+  if (port != -1) debugger_port = port;
+}
+
+void VMGlue::EnableVMService(int port) {
+  vm_service_start = true;
+  if (port != -1) vm_service_server_port = port;
+}
+
 int VMGlue::StartMainIsolate() {
   if (!initialized_vm_) {
     int rtn = InitializeVM();
     if (rtn != 0) return rtn;
+  }
+  
+  // Start the debugger wire protocol handler if necessary.
+  if (debugger_start) {
+    ASSERT(debugger_port >= 0);
+    debugger_port = dart::bin::DebuggerConnectionHandler::StartHandler(debugger_ip, debugger_port);
+    LOGE("Debugger listening on port %d\n", debugger_port);
+  }
+
+  // Start event handler.
+  dart::bin::EventHandler::Start();
+
+  if (vm_service_start) {
+    LOGE("Starting VM Service isolate at %d", vm_service_server_port);
+    ASSERT(vm_service_server_port >= 0);
+    bool r = dart::bin::VmService::Start(vm_service_server_port);
+    if (!r) {
+      LOGE("Could not start VM Service isolate %s\n",
+                    dart::bin::VmService::GetErrorMessage());
+    }
   }
 
   // Create an isolate and loads up the application script.
@@ -259,8 +300,33 @@ int VMGlue::StartMainIsolate() {
   Dart_Handle source = LoadSourceFromFile(main_script_);
   CheckError(Dart_LoadScript(url, source, 0, 0));
 
+  Dart_Handle io_lib_url = Dart_NewStringFromCString("dart:io");
+  Dart_Handle io_lib = Dart_LookupLibrary(io_lib_url);
+  CheckError(io_lib);
+  Dart_Handle platform_class_name = Dart_NewStringFromCString("Platform");
+  Dart_Handle platform_type =
+      Dart_GetType(io_lib, platform_class_name, 0, NULL);
+  CheckError(platform_type);
+  Dart_Handle script_name_name = Dart_NewStringFromCString("_nativeScript");
+  Dart_Handle dart_script = Dart_NewStringFromCString(main_script_);
+  Dart_Handle set_script_name =
+      Dart_SetField(platform_type, script_name_name, dart_script);
+  CheckError(set_script_name);
+
+  dart::bin::VmService::SendIsolateStartupMessage();
+
+  // Make the isolate runnable so that it is ready to handle messages.
+  
   Dart_ExitScope();
   Dart_ExitIsolate();
+  bool retval = Dart_IsolateMakeRunnable(isolate_);
+  if (!retval) {
+    error = strdup("Invalid isolate state - Unable to make it runnable");
+    Dart_EnterIsolate(isolate_);
+    Dart_ShutdownIsolate();
+    return NULL;
+  }
+
   return 0;
 }
 
