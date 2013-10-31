@@ -1,6 +1,7 @@
 vars = {
-  "dart_branch": "/branches/bleeding_edge",
-  "dart_rev": "",
+  "dart_url": "http://dart.googlecode.com/svn",
+  "dart_branch": "/trunk",
+  "dart_rev": "@29656", # 0.8.9.0
   
   "chromium_url": "http://src.chromium.org/svn",
   "chromium_git": "http://git.chromium.org/git",
@@ -11,6 +12,8 @@ vars = {
   "co19_rev": "@623",
   "co19_repo": "http://co19.googlecode.com/svn/trunk/co19/",
 
+  "bootstrap_css_rev" : "@28387",
+
   "skia_branch": "/trunk",
   "skia_rev": "@11999",
 }
@@ -18,7 +21,7 @@ vars = {
 deps = {
   # dart standalone (https://dart.googlecode.com/svn/trunk/deps/standalone.deps/DEPS)
   "openglui/third_party/dart":
-    "http://dart.googlecode.com/svn" + Var("dart_branch") + "/dart" + Var("dart_rev"),
+    Var("dart_url") + Var("dart_branch") + "/dart" + Var("dart_rev"),
 
   # Stuff needed for GYP to run.
   "openglui/third_party/dart/third_party/gyp":
@@ -36,6 +39,14 @@ deps = {
 
   "openglui/third_party/dart/third_party/net_nss":
       Var("chromium_url") + "/trunk/src/net/third_party/nss" + Var("nss_rev"),
+
+  # vm service resources
+  "openglui/third_party/dart/runtime/bin/vmservice/client/bootstrap_css":
+      Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
+  "openglui/third_party/dart/runtime/bin/vmservice/client/web/bootstrap_css":
+      Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
+  "openglui/third_party/dart/runtime/bin/vmservice/client/out/web/bootstrap_css":
+      Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
 
   # skia standalone (http://skia.googlecode.com/svn/trunk/DEPS)
   "openglui/third_party/skia" : "http://skia.googlecode.com/svn" + Var("skia_branch") + Var("skia_rev"),
@@ -67,7 +78,7 @@ deps_os = {
     "openglui/third_party/skia/platform_tools/android/third_party/externals/png" : "https://android.googlesource.com/platform/external/libpng.git@android-4.2.2_r1.2",
     "openglui/third_party/skia/platform_tools/android/third_party/externals/jpeg" : "https://android.googlesource.com/platform/external/jpeg.git@android-4.2.2_r1.2",
 
-    # dart
+    # dart (https://code.google.com/p/dart/source/browse/trunk/deps/all.deps/DEPS)
     "openglui/third_party/android_tools":
       Var("chromium_git") + "/android_tools.git" +
       "@ebd740fc3d55dda34d9322c8c5f7749302734325",
