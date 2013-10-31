@@ -16,6 +16,10 @@
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
 
+// Share the context so we can mark it as dirty to automagically call SwapBuffers in WebGL as well
+// this will happend when clear, drawArrays or drawElements are called
+CanvasContext* display_context = NULL;
+
 Dart_Handle HandleError(Dart_Handle handle) {
   if (Dart_IsError(handle)) Dart_PropagateError(handle);
   return handle;
@@ -345,6 +349,7 @@ void GLDrawArrays(Dart_NativeArguments arguments) {
 
   glDrawArrays(mode, first, count);
   CheckGLError("glDrawArrays");
+  display_context->makeDirty();
   Dart_ExitScope();
   LOGI("Done GLDrawArrays");
 }
@@ -783,6 +788,7 @@ void GLClear(Dart_NativeArguments arguments) {
   HandleError(Dart_IntegerToInt64(maskHandle, &mask));
   glClear(mask);
   CheckGLError("glClear");
+  display_context->makeDirty();
   Dart_ExitScope();
 }
 
@@ -883,8 +889,6 @@ void PlaySample(Dart_NativeArguments arguments) {
 }
 
 // 2D Canvas.
-
-CanvasContext* display_context = NULL;
 
 void C2DCreateNativeContext(Dart_NativeArguments arguments) {
   LOGI("In C2DCreateNativeContext");

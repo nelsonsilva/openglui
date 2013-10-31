@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library android_extension;
+library web_gl;
 import 'dart:async';
 import 'dart:math' show Rectangle;
 import 'dart:typed_data';
@@ -19,12 +19,18 @@ class BodyElement {
 
 typedef void RequestAnimationFrameCallback(num highResTime);
 
+class Console {
+  Console._();
+  log(msg) { _log(msg); }
+}
+
 class Window extends EventTarget {
   static int _nextId = 0;
   List _callbacks;
   List _arguments;
+  Console console;
 
-  Window._internal() : _callbacks = [], _arguments = [];
+  Window._internal() : console = new Console._(), _callbacks = [], _arguments = [];
 
   int _scheduleCallback(callback, [argument]) {
     _callbacks.add(callback);
@@ -77,13 +83,17 @@ class Document extends Node {
   BodyElement _body;
   get body => _body;
   Document._internal() : _body = new BodyElement();
+  querySelector(String selectors) => null;
 }
 
 Document document = new Document._internal();
 
+var querySelector = document.querySelector;
+var query = querySelector;
+
 // TODO(gram): make private and call from within library context.
 update_() {
-  log("in update");
+  _log("in update");
   window._dispatch();
 }
 
@@ -430,7 +440,7 @@ class AudioElement {
 // The simplest way to call native code: top-level functions.
 int systemRand() native "SystemRand";
 void systemSrand(int seed) native "SystemSrand";
-void log(String what) native "Log";
+void _log(String what) native "Log";
 
 int getDeviceScreenWidth() native "GetDeviceScreenWidth";
 int getDeviceScreenHeight() native "GetDeviceScreenHeight";
@@ -594,7 +604,7 @@ void stopBackground() native "StopBackground";
 
 get _printClosure => (s) {
   try {
-    log(s);
+    _log(s);
   } catch (_) {
     throw(s);
   }
@@ -788,7 +798,7 @@ class ImageElement extends Node {
   get src => _src;
 
   set src(String v) {
-    log("Set ImageElement src to $v");
+    _log("Set ImageElement src to $v");
     _src = v;
   }
 
@@ -1037,7 +1047,7 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
     if (element == null || element.src == null || element.src.length == 0) {
       throw "drawImage called with no valid src";
     } else {
-      log("drawImage ${element.src}");
+      _log("drawImage ${element.src}");
     }
     var w = (element.width == null) ? 0 : element.width;
     var h = (element.height == null) ?  0 : element.height;

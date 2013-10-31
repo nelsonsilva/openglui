@@ -8,7 +8,7 @@
 
 library openglui_canvas_tests;
 
-import 'gl.dart';
+import 'dart:html';
 import 'dart:math' as Math;
 
 var ctx;
@@ -16,20 +16,26 @@ var width, height;
 bool isDirty = true;
 var canvas;
 
+log(message) => window.console.log(message);
+
 void resize(int w, int h) {
   width = w;
   height = h;
 }
 
-void setup(canvasp, int w, int h, int f) {
-  if (canvasp == null) {
-    log("Allocating canvas");
-    canvas = new CanvasElement(width: w, height: h);
-    document.body.nodes.add(canvas);
-  } else {
-    log("Using parent canvas");
-    canvas = canvasp;
+void main([int w, int h, int f]) {
+
+  if (w == null) {
+    w = window.innerWidth;
   }
+
+  if (h == null) {
+    h = window.innerHeight;
+  }
+
+  canvas = new CanvasElement(width: w, height: h);
+  document.body.nodes.add(canvas);
+
   canvas.onMouseDown.listen((e) {
     ++testnum;
     isDirty = true;
@@ -200,10 +206,10 @@ colors() {
 
   var i = 1;
   var yinc = height / (2 * colors.length + 1);
-  
+
   ctx.textAlign = "center";
   ctx.font = "${yinc}px Courier";
-  
+
   for (var color in colors) {
     ctx.fillStyle = color;
     ctx.fillRect(width / 4, i * 2 * yinc, width / 2, 3 * yinc / 2);
@@ -660,7 +666,7 @@ void linearGradient() {
   ctx.rect(0, 0, width, height);
   var grd = ctx.createLinearGradient(0, 0, width, height);
   // light blue
-  grd.addColorStop(0, '#8ED6FF');   
+  grd.addColorStop(0, '#8ED6FF');
   // dark blue
   grd.addColorStop(1, '#004CB3');
   ctx.fillStyle = grd;

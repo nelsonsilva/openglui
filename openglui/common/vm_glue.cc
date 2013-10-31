@@ -84,15 +84,17 @@ Dart_Handle VMGlue::LibraryTagHandler(Dart_LibraryTag tag,
   if (tag == Dart_kCanonicalizeUrl) {
     return urlHandle;
   }
-  // TODO(vsm): Split this up into separate libraries for 3D, 2D,
-  // Touch, Audio, etc.  All builtin libraries should be handled here
-  // (or moved into a snapshot).
-  if (strcmp(url, "gl.dart") == 0) {
+  // All builtin libraries should be handled here (or moved into a snapshot).
+  if (strcmp(url, "dart:html") == 0) {
     Dart_Handle source =
         VMGlue::LoadSourceFromFile(extension_script_);
     Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
     CheckError(Dart_SetNativeResolver(library, ResolveName));
     return library;
+  }
+  // TODO(nfgs): Create web_gl.dart
+  if (strcmp(url, "dart:web_gl") == 0) {
+    return Dart_Null();
   }
   LOGE("UNIMPLEMENTED: load library %s\n", url);
   return NULL;
@@ -243,7 +245,8 @@ int VMGlue::StartMainIsolate() {
 
   // Create an isolate and loads up the application script.
   char* error = NULL;
-  if (!CreateIsolateAndSetup(main_script_, "main", NULL, &error)) {
+  // Do not run "main" yet, wait for CallSetup
+  if (!CreateIsolateAndSetup(main_script_, NULL, NULL, &error)) {
     LOGE("CreateIsolateAndSetup: %s\n", error);
     free(error);
     return -1;
@@ -270,12 +273,11 @@ int VMGlue::CallSetup(bool force) {
         surface_->width(), surface_->height(), setup_flag_);
     Dart_EnterIsolate(isolate_);
     Dart_EnterScope();
-    Dart_Handle args[4];
-    args[0] = CheckError(Dart_Null());
-    args[1] = CheckError(Dart_NewInteger(surface_->width()));
-    args[2] = CheckError(Dart_NewInteger(surface_->height()));
-    args[3] = CheckError(Dart_NewInteger(setup_flag_));
-    int rtn = Invoke("setup", 4, args);
+    Dart_Handle args[3];
+    args[0] = CheckError(Dart_NewInteger(surface_->width()));
+    args[1] = CheckError(Dart_NewInteger(surface_->height()));
+    args[2] = CheckError(Dart_NewInteger(setup_flag_));
+    int rtn = Invoke("main", 3, args);
 
     if (rtn == 0) {
       // Plug in the print handler. It would be nice if we could do this

@@ -7,7 +7,8 @@
  */
 library flashingbox;
 
-import 'gl.dart';
+import 'dart:html';
+import 'dart:web_gl';
 
 RenderingContext gl = null;
 
@@ -15,10 +16,14 @@ num r;
 num g;
 num b;
 
-void setup(canvas, int w, int h, int f) {
-  if (canvas == null) {
-    canvas = new CanvasElement(width: w, height: h);
-  }
+log(message) => window.console.log(message);
+
+void main([int w, int h, int f]) {
+  if (w == null) w = window.innerWidth;
+  if (h == null) h = window.innerHeight;
+  var canvas = new CanvasElement(width: w, height: h);
+  document.body.nodes.add(canvas);
+
   gl = canvas.getContext("experimental-webgl");
   r = 0;
   g = 0;
@@ -47,7 +52,6 @@ void update(when) {
   if (b > 1) {
     b = 0;
   }
-  glSwapBuffers();
   window.requestAnimationFrame(update);
 }
 

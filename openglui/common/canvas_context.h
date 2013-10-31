@@ -48,6 +48,10 @@ class CanvasContext {
     return isDirty_;
   }
 
+  inline void makeDirty() {
+    isDirty_ = true;
+  }
+
   inline void clearDirty() {
     isDirty_ = false;
   }

@@ -16,7 +16,9 @@ library asteroids;
 
 import 'dart:math' as Math;
 import 'dart:math' show Rectangle;
-import 'gl.dart';
+import 'dart:html';
+
+const sfx_extension = 'raw';
 
 const RAD = Math.PI / 180.0;
 const PI = Math.PI;
@@ -31,6 +33,8 @@ const PIO32 = Math.PI / 32.0;
 var _rnd = new Math.Random();
 double random() => _rnd.nextDouble();
 int randomInt(int min, int max) => min + _rnd.nextInt(max - min + 1);
+
+log(message) => window.console.log(message);
 
 class Key {
   static const SHIFT = 16;
@@ -726,8 +730,8 @@ class GameCompleted extends Scene {
     if (interval.framecounter++ == 0) {
       if (game.score == game.highscore) {
         // save new high score to HTML5 local storage
-        if (window.localStorage) {
-          window.localStorage[SCOREDBKEY] = game.score;
+        if (window.localStorage != null) {
+          window.localStorage[SCOREDBKEY] = game.score.toString();
         }
       }
     }
@@ -3252,15 +3256,13 @@ class Input {
 void resize(int w, int h) {}
 
 
-void setup(canvasp, int w, int h, int f) {
-  var canvas;
-  if (canvasp == null) {
+void main([w, h, f]) {
+
+  var canvas = querySelector("#canvas");
+  if (canvas == null) {
     log("Allocating canvas");
     canvas = new CanvasElement(width: w, height: h);
     document.body.nodes.add(canvas);
-  } else {
-    log("Using parent canvas");
-    canvas = canvasp;
   }
 
   for (var i = 0; i < 4; i++) {

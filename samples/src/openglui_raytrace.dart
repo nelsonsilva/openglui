@@ -10,7 +10,8 @@
  */
 library openglui_raytrace;
 
-import 'gl.dart';
+import 'dart:html';
+import 'dart:web_gl';
 import 'dart:math' as Math;
 import 'dart:typed_data';
 
@@ -161,6 +162,8 @@ const VERTEX_PROGRAM = """
  }
 """;
 
+log(message) => window.console.log(message);
+
 loadShader(final type, final program) {
   final shader = gl.createShader(type);
   gl.shaderSource(shader, program);
@@ -217,24 +220,17 @@ void initShaders() {
   sphere3Center = gl.getUniformLocation(shaderProgram, "sphere3Center");
 }
 
-// TODO(gram): This should go away at some point. For now it is a kludge
-// to allow us to run same .dart file with WebGL and natively; the WebGL
-// version will set this to true.
-var wrapVertexArray = false;
-
-wrapVertices(a) => wrapVertexArray ? (new Float32List.fromList(a)) : a;
-
 void initBuffers() {
   var vertexPositionBuffer = gl.createBuffer();
   gl.bindBuffer(RenderingContext.ARRAY_BUFFER, vertexPositionBuffer);
-  var vertices = [
+  var vertices = new Float32List.fromList([
       1.0,  1.0,
       -1.0,  1.0,
       1.0, -1.0,
       -1.0, -1.0,
-      ];
+      ]);
 
-  gl.bufferDataTyped(RenderingContext.ARRAY_BUFFER, wrapVertices(vertices),
+  gl.bufferDataTyped(RenderingContext.ARRAY_BUFFER, vertices,
       RenderingContext.STATIC_DRAW);
   gl.bindBuffer(RenderingContext.ARRAY_BUFFER, vertexPositionBuffer);
   gl.vertexAttribPointer(aVertexPosition, 2, RenderingContext.FLOAT,
@@ -320,7 +316,7 @@ log("ratio = ${ratio}");
   pushVec(cameraBotRight, corners);
   pushVec(cameraBotLeft, corners);
 
-  gl.bufferDataTyped(RenderingContext.ARRAY_BUFFER, wrapVertices(corners),
+  gl.bufferDataTyped(RenderingContext.ARRAY_BUFFER, new Float32List.fromList(corners),
       RenderingContext.STATIC_DRAW);
 
   gl.uniform3f(cameraPos, cameraFrom.x, cameraFrom.y, cameraFrom.z);
@@ -329,7 +325,7 @@ log("ratio = ${ratio}");
   gl.uniform3f(sphere3Center, x3, y3, z3);
 
   gl.drawArrays(RenderingContext.TRIANGLE_STRIP, 0, 4);
-  glSwapBuffers();
+  //glSwapBuffers();
 
   t += 0.03;
   if (t > Math.PI * 200) {
@@ -337,10 +333,12 @@ log("ratio = ${ratio}");
   }
 }
 
-void setup(canvas, int w, int h, int f) {
-  if (canvas == null) {
-    canvas = new CanvasElement(width: w, height: h);
-  }
+void main([int w, int h, int f]) {
+  if (w == null) w = window.innerWidth;
+  if (h == null) h = window.innerHeight;
+  var canvas = new CanvasElement(width: w, height: h);
+  document.body.nodes.add(canvas);
+
   gl = canvas.getContext("experimental-webgl");
   initShaders();
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
