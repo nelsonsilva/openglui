@@ -30,7 +30,6 @@
       'copies': [ {
         'destination': '<(PRODUCT_DIR)',
         'files': [
-           '../../openglui/common/gl.dart',
            '../src/openglui_raytrace.dart',
            '../src/openglui_canvas_tests.dart',
            '../src/flashingbox.dart',

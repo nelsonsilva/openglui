@@ -20,7 +20,6 @@
             'target_name': 'android_app',
             'type': 'none',
             'dependencies': [
-              'copy_extension',
               'copy_main',
               '../../openglui_embedder.gyp:android_embedder',
               'copy_embedder',
@@ -34,7 +33,6 @@
                 'action_name': 'build_app',
                 'inputs': [
                   '<(PRODUCT_DIR)/lib.target/libandroid_embedder.so',
-                  '../../openglui/common/gl.dart',
                   '../src/blasteroids.dart',
                 ],
                 'outputs': [
@@ -52,16 +50,6 @@
               'destination': 'libs/armeabi',
               'files': [
                 '<(PRODUCT_DIR)/lib.target/libandroid_embedder.so'
-              ],
-            }],
-          },
-          {
-            'target_name': 'copy_extension',
-            'type': 'none',
-            'copies': [ {
-              'destination': 'assets/dart',
-              'files': [
-                '../../openglui/common/gl.dart'
               ],
             }],
           },

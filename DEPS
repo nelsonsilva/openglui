@@ -88,6 +88,6 @@ deps_os = {
 hooks = [
   {
     "pattern": ".",
-    "action": ["python", "openglui/tools/generate_projects.py", "samples"],
+    "action": ["python", "openglui/tools/generate_projects.py"],
   },
 ]

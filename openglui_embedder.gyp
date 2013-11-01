@@ -9,6 +9,8 @@
     'skia_build_flag' : '--release',
     'skia_libs_location_android': '-Lthird_party/skia/out/config/android-arm/Release/obj.target/gyp', 
     'skia_libs_location_desktop': '-Lthird_party/skia/out/Release',
+    'gl_dart_file': 'openglui/common/gl.dart',
+    'gl_resources_cc_file': '<(SHARED_INTERMEDIATE_DIR)/gl_resources_gen.cc',
   },
   'conditions': [
     ['OS=="android"',
@@ -25,6 +27,7 @@
               '<(dart)/runtime/dart-runtime.gyp:libdart_io',
               '<(dart)/runtime/dart-runtime.gyp:generate_snapshot_file#host',
               '<(dart)/runtime/dart-runtime.gyp:generate_resources_cc_file#host',
+              'generate_gl_resources_cc_file#host',
             ],
             'include_dirs': [
               '.',
@@ -58,6 +61,7 @@
               '<(dart_version_cc_file)',
               '<(dart_snapshot_cc_file)',
               '<(dart_resources_cc_file)',
+              '<(gl_resources_cc_file)',
               'third_party/android_tools/ndk/sources/android/native_app_glue/android_native_app_glue.h',
               'third_party/android_tools/ndk/sources/android/native_app_glue/android_native_app_glue.c',
               'third_party/skia/src/core/SkPaintOptionsAndroid.cpp',
@@ -199,6 +203,7 @@
               '<(dart)/runtime/dart-runtime.gyp:libdart_io',
               '<(dart)/runtime/dart-runtime.gyp:generate_snapshot_file#host',
               '<(dart)/runtime/dart-runtime.gyp:generate_resources_cc_file#host',
+              'generate_gl_resources_cc_file#host',
             ],
             'include_dirs': [
               '.',
@@ -229,6 +234,7 @@
               '<(dart_version_cc_file)',
               '<(dart_snapshot_cc_file)',
               '<(dart_resources_cc_file)',
+              '<(gl_resources_cc_file)',
               'openglui/common/canvas_context.cc',
               'openglui/common/canvas_context.h',
               'openglui/common/canvas_state.cc',
@@ -322,6 +328,36 @@
         ],
       },
     ],
+  ],
+  'targets': [
+    {
+      'target_name': 'generate_gl_resources_cc_file',
+      'type': 'none',
+      'toolsets':['host'],
+      'sources': [
+        '<(gl_dart_file)',
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_gl_resources_cc_file',
+          'inputs': [
+            'tools/create_resources.py',
+            '<@(_sources)',
+          ],
+          'outputs': [
+            '<(gl_resources_cc_file)',
+          ],
+          'action': [
+            'python',
+            'tools/create_resources.py',
+            '--output', '<(gl_resources_cc_file)',
+            '--root_prefix', 'openglui/common/',
+            '<@(_sources)'
+          ],
+          'message': 'Generating ''<(gl_resources_cc_file)'' file.'
+        },
+      ]
+    },
   ],
 }
 

@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "bin/builtin.h"
+#include "bin/dartutils.h"
 #include "bin/dbg_connection.h"
 #include "bin/eventhandler.h"
 #include "bin/vmservice_impl.h"
@@ -18,6 +19,7 @@
 #include "openglui/common/extension.h"
 #include "openglui/common/log.h"
 #include "openglui/common/vm_glue.h"
+#include "openglui/common/resources.h"
 
 #include "include/dart_api.h"
 #include "include/dart_debugger_api.h"
@@ -33,12 +35,13 @@ namespace dart {
   }
 }
 
-char* VMGlue::extension_script_ = NULL;
+// This is a snapshot of gl.dart
+extern const uint8_t* gl_snapshot_buffer;
+
 bool VMGlue::initialized_vm_ = false;
 
 VMGlue::VMGlue(ISized* surface,
                const char* script_path,
-               const char* extension_script,
                const char* main_script,
                int setup_flag)
     : surface_(surface),
@@ -58,15 +61,9 @@ VMGlue::VMGlue(ISized* surface,
   if (main_script == NULL) {
     main_script = "main.dart";
   }
-  if (extension_script == NULL) {
-    extension_script = "gl.dart";
-  }
   size_t len = strlen(script_path) + strlen(main_script) + 2;
   main_script_ = new char[len];
   snprintf(main_script_, len, "%s/%s", script_path, main_script);
-  len = strlen(script_path) + strlen(extension_script) + 2;
-  extension_script_ = new char[len];
-  snprintf(extension_script_, len, "%s/%s", script_path, extension_script);
 }
 
 Dart_Handle VMGlue::CheckError(Dart_Handle handle) {
@@ -96,8 +93,10 @@ Dart_Handle VMGlue::LibraryTagHandler(Dart_LibraryTag tag,
   }
   // All builtin libraries should be handled here (or moved into a snapshot).
   if (strcmp(url, "dart:html") == 0) {
-    Dart_Handle source =
-        VMGlue::LoadSourceFromFile(extension_script_);
+    // Let's load gl.dart from resources
+    const char* gl_source = NULL;
+    openglui::Resources::ResourceLookup("/gl.dart", &gl_source);
+    Dart_Handle source = Dart_NewStringFromCString(gl_source);
     Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
     CheckError(Dart_SetNativeResolver(library, ResolveName));
     return library;

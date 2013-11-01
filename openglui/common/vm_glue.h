@@ -20,12 +20,10 @@ class VMGlue {
  public:
   explicit VMGlue(ISized* surface,
                   const char* script_path,
-                  const char* extension_script = NULL,
                   const char* main_script = NULL,
                   int setup_flag = 0);
   ~VMGlue() {
     delete[] main_script_;
-    delete[] extension_script_;
   }
 
   int InitializeVM();
