@@ -1528,6 +1528,27 @@ void C2DGetImageHeight(Dart_NativeArguments arguments) {
   LOGI("Out C2DGetImageHeight");
 }
 
+void GetFileAsString(Dart_NativeArguments arguments) {
+
+  Dart_EnterScope();
+  const char* url = GetArgAsString(arguments, 0);
+  LOGI("GetFileAsString %s", url);
+  FILE* file = fopen(url, "r");
+  // Get the file size.
+  fseek(file, 0, SEEK_END);
+  intptr_t fileLength = ftell(file);
+
+  rewind(file);
+
+  // Allocate data buffer.
+  char *data = new char[fileLength + 1];
+  fileLength = fread(data, sizeof(char), fileLength, file);
+  data[fileLength] = '\0';
+  
+  SetStringReturnValue(arguments, data);
+  Dart_ExitScope();
+}
+
 struct FunctionLookup {
   const char* name;
   Dart_NativeFunction function;
@@ -1663,6 +1684,8 @@ FunctionLookup function_list[] = {
     { "C2DSetStrokeGradient", C2DSetStrokeGradient},
     { "C2DGetImageWidth", C2DGetImageWidth},
     { "C2DGetImageHeight", C2DGetImageHeight},
+
+    { "GetFileAsString", GetFileAsString},
 
     {NULL, NULL}};
 

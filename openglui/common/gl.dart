@@ -4,7 +4,8 @@
 
 library web_gl;
 import 'dart:async';
-import 'dart:math' show Rectangle;
+import 'dart:collection';
+import 'dart:math' show Point, Rectangle;
 import 'dart:typed_data';
 
 // A VERY simplified DOM.
@@ -12,6 +13,7 @@ import 'dart:typed_data';
 class BodyElement {
   List _nodes;
   get nodes => _nodes;
+  get children => nodes;
   BodyElement() : _nodes = new List();
 }
 
@@ -24,11 +26,18 @@ class Console {
   log(msg) { _log(msg); }
 }
 
+class Navigator {
+  final String userAgent = "";
+}
+
 class Window extends EventTarget {
   static int _nextId = 0;
   List _callbacks;
   List _arguments;
   Console console;
+  num innerWidth, innerHeight;
+  final double devicePixelRatio = 1.0;
+  final Navigator navigator = new Navigator();
 
   Window._internal() : console = new Console._(), _callbacks = [], _arguments = [];
 
@@ -74,6 +83,22 @@ class Window extends EventTarget {
   Map localStorage = {};  // TODO(gram) - Make this persistent.
 
   Stream<DeviceMotionEvent> get onDeviceMotion => new _EventStream(this, 'devicemotion');
+  Stream<MouseEvent> get onBlur => new _EventStream(this, 'blur');
+  Stream<MouseEvent> get onResize => new _EventStream(this, 'resize');
+
+
+  // TODO - Extend Node ?
+  Stream<KeyboardEvent> get onKeyDown => new _EventStream(this, 'keydown');
+  Stream<KeyboardEvent> get onKeyUp => new _EventStream(this, 'keyup');
+  Stream<MouseEvent> get onMouseDown => new _EventStream(this, 'mousedown');
+  Stream<MouseEvent> get onMouseMove => new _EventStream(this, 'mousemove');
+  Stream<MouseEvent> get onMouseUp => new _EventStream(this, 'mouseup');
+  Stream<MouseEvent> get onMouseOut => new _EventStream(this, 'mouseout');
+  Stream<TouchEvent> get onTouchCancel => new _EventStream(this, 'touchcancel');
+  Stream<TouchEvent> get onTouchEnd => new _EventStream(this, 'touchend');
+  Stream<TouchEvent> get onTouchMove => new _EventStream(this, 'touchmove');
+  Stream<TouchEvent> get onTouchStart => new _EventStream(this, 'touchstart');
+  Stream<PopStateEvent> get onPopState => new _EventStream(this, 'popstate');
 }
 
 Window window = new Window._internal();
@@ -183,14 +208,45 @@ class KeyboardEvent extends Event {
 class MouseEvent extends Event {
   final int screenX, screenY;
   final int clientX, clientY;
+  final Point offset;
+  final Point client;
+  final bool altKey;
+  final bool ctrlKey;
+  final bool shiftKey;
+
+  final int button = 0;
 
   MouseEvent(String type, int x, int y)
     : super(type),
       screenX = x,
       screenY = y,
       clientX = x,
-      clientY = y {
+      clientY = y,
+      altKey = false,
+      ctrlKey = false,
+      shiftKey = false,
+      offset = new Point(x, y),
+      client = new Point(x, y) {
   }
+}
+
+class TouchEvent extends Event {
+  TouchList touches,
+            targetTouches,
+            changedTouches;
+
+  TouchEvent(String type,
+      this.touches, this.targetTouches, this.changedTouches,
+      {Window view, int screenX: 0, int screenY: 0, int clientX: 0,
+      int clientY: 0, bool ctrlKey: false, bool altKey: false,
+      bool shiftKey: false, bool metaKey: false}) : super(type) {
+  }
+
+  static bool supported = true;
+}
+
+class TouchList extends Object with ListMixin<Touch> implements List {
+  Touch item(int index) => this[index];
 }
 
 class DeviceAcceleration  {
@@ -322,9 +378,27 @@ class _EventStream<T extends Event> extends Stream<T> {
 class Node extends EventTarget {
   Stream<KeyboardEvent> get onKeyDown => new _EventStream(this, 'keydown');
   Stream<KeyboardEvent> get onKeyUp => new _EventStream(this, 'keyup');
+  Stream<KeyboardEvent> get onKeyPress => new _EventStream(this, 'keypress');
   Stream<MouseEvent> get onMouseDown => new _EventStream(this, 'mousedown');
   Stream<MouseEvent> get onMouseMove => new _EventStream(this, 'mousemove');
   Stream<MouseEvent> get onMouseUp => new _EventStream(this, 'mouseup');
+  Stream<MouseEvent> get onMouseOut => new _EventStream(this, 'mouseout');
+  Stream<MouseEvent> get onMouseWheel => new _EventStream(this, 'mousewheel');
+}
+
+class Element extends Node {
+  CssStyleDeclaration style;
+  Element() : super(), style = new CssStyleDeclaration();
+  void focus() {}
+}
+
+class CssStyleDeclaration {
+
+  set cursor(v) {}
+
+  noSuchMethod(invocation) {
+    print('Unimplemented ${invocation.memberName}');
+  }
 }
 
 // TODO(gram): If we support more than one on-screen canvas, we will
@@ -332,7 +406,7 @@ class Node extends EventTarget {
 // with more granularity; right now we just iterate through DOM nodes
 // until we find one that handles the event.
 _dispatchEvent(Event event) {
-  assert(document.body.nodes.length <= 1);
+  //assert(document.body.nodes.length <= 1);
   for (var target in document.body.nodes) {
     event.target = target;
     if (target.dispatchEvent(event)) {
@@ -369,9 +443,12 @@ onMouseUp_(int when, double x, double y) =>
 onAccelerometer(double x, double y, double z) =>
     window.dispatchEvent(new DeviceMotionEvent('devicemotion', x, y, z));
 
-class CanvasElement extends Node {
+abstract class CanvasImageSource {}
+
+class CanvasElement extends Element implements CanvasImageSource {
   int height;
   int width;
+  int tabIndex = 0;
 
   CanvasRenderingContext2D _context2d;
   RenderingContext _context3d;
@@ -388,7 +465,7 @@ class CanvasElement extends Node {
     getContext('2d');
   }
 
-  CanvasRenderingContext getContext(String contextId) {
+  CanvasRenderingContext getContext(String contextId, [Map attrs]) {
     if (contextId == "2d") {
       if (_context2d == null) {
         _context2d = new CanvasRenderingContext2D(this, width, height);
@@ -403,6 +480,23 @@ class CanvasElement extends Node {
     }
   }
 
+  CanvasRenderingContext get context2D => getContext("2d");
+
+  CanvasRenderingContext getContext3d({alpha: true, depth: true, stencil: false,
+    antialias: true, premultipliedAlpha: true, preserveDrawingBuffer: false}) {
+
+    var options = {
+      'alpha': alpha,
+      'depth': depth,
+      'stencil': stencil,
+      'antialias': antialias,
+      'premultipliedAlpha': premultipliedAlpha,
+      'preserveDrawingBuffer': preserveDrawingBuffer,
+    };
+
+    return getContext('webgl', options);
+  }
+
   String toDataUrl(String type) {
     // This needs to take the contents of the underlying
     // canvas painted by the 2d context, give that a unique
@@ -414,16 +508,31 @@ class CanvasElement extends Node {
     _context2d = null;
     return rtn;
   }
+
+  Rectangle getBoundingClientRect() => new Rectangle(0, 0, width, height);
+  get clientLeft => 0;
+  get clientTop => 0;
+  get clientWidth => width;
+  get clientHeight => height;
 }
 
 class CanvasRenderingContext {
   final CanvasElement canvas;
+  final double backingStorePixelRatio = 1.0;
 
   CanvasRenderingContext(this.canvas);
 }
 
-class AudioElement {
+class MediaElement {
+  String canPlayType(String type, [String keySystem]) => "maybe";
+}
+
+class AudioElement extends EventTarget with MediaElement {
   double volume;
+  bool loop = false;
+  bool ended = true;
+  num currentTime = 0;
+
   String _src;
   get src => _src;
   set src(String v) {
@@ -431,10 +540,25 @@ class AudioElement {
     _loadSample(v);
   }
 
+  void load() {
+    var evt = new Event("canplaythrough")..target = this;
+    dispatchEvent(evt);
+  }
+
   AudioElement([this._src]);
   void play() {
     _playSample(_src);
   }
+
+  AudioElement clone(bool deep) => new AudioElement()..src = src;
+
+  Stream<Event> get onError => new _EventStream(this, 'error');
+  Stream<Event> get onEnded => new _EventStream(this, 'ended');
+  Stream<Event> get onCanPlayThrough => new _EventStream(this, 'canplaythrough');
+}
+
+class AudioContext {
+  static final bool supported = false;
 }
 
 // The simplest way to call native code: top-level functions.
@@ -586,6 +710,7 @@ class RenderingContext extends CanvasRenderingContext {
   viewport(x, y, width, height) => glViewport(x, y, width, height);
   getShaderInfoLog(shader) => glGetShaderInfoLog(shader);
   getProgramInfoLog(program) => glGetProgramInfoLog(program);
+  getExtension(name) => null;
 
   // TODO(vsm): Kill.
   noSuchMethod(invocation) {
@@ -788,8 +913,9 @@ class CanvasGradient {
   }
 }
 
-class ImageElement extends Node {
+class ImageElement extends Node implements CanvasImageSource {
   Stream<Event> get onLoad => new _EventStream(this, 'load');
+  Stream<Event> get onError => new _EventStream(this, 'error');
 
   String _src;
   int _width;
@@ -817,6 +943,8 @@ class ImageElement extends Node {
   get height => _height == null ? _height = _GetImageHeight(_src) : _height;
   set width(int widthp) => _width = widthp;
   set height(int heightp) => _height = heightp;
+  get naturalWidth => width;
+  get naturalHeight => height;
 
   ImageElement({String srcp, int widthp, int heightp})
     : _src = srcp,
@@ -1236,3 +1364,32 @@ class CanvasRenderingContext2D extends CanvasRenderingContext {
 var sfx_extension = 'raw';
 int _loadSample(String s) native "LoadSample";
 int _playSample(String s) native "PlaySample";
+
+
+_getFileAsString(String url) native "GetFileAsString";
+
+class HttpRequest extends EventTarget {
+  static const int LOADING = 3;
+  static const int DONE = 4;
+
+  int status = 0;
+  int readyState = 0;
+
+  String url;
+  String responseText;
+
+  static Future<String> getString(String url) => new Future<String>.value(_getFileAsString(url));
+
+  void open(String method, String url) {
+    this.url = url;
+  }
+
+  void send([data]) {
+    responseText = _getFileAsString(url);
+    status = 200;
+    readyState = DONE;
+    dispatchEvent(new Event("readystatechange"));
+  }
+
+  Stream<Event> get onReadyStateChange => new _EventStream(this, 'readystatechange');
+}

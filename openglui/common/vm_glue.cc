@@ -12,6 +12,7 @@
 
 #include "bin/builtin.h"
 #include "bin/dartutils.h"
+#include "bin/directory.h"
 #include "bin/dbg_connection.h"
 #include "bin/eventhandler.h"
 #include "bin/vmservice_impl.h"
@@ -39,6 +40,8 @@ namespace dart {
 extern const uint8_t* gl_snapshot_buffer;
 
 bool VMGlue::initialized_vm_ = false;
+
+//static const char* package_root = NULL;
 
 VMGlue::VMGlue(ISized* surface,
                const char* script_path,
@@ -86,27 +89,37 @@ Dart_Handle VMGlue::CheckError(Dart_Handle handle) {
 Dart_Handle VMGlue::LibraryTagHandler(Dart_LibraryTag tag,
                                       Dart_Handle library,
                                       Dart_Handle urlHandle) {
+
   const char* url;
   Dart_StringToCString(urlHandle, &url);
-  if (tag == Dart_kCanonicalizeUrl) {
-    return urlHandle;
+
+  if (tag != Dart_kCanonicalizeUrl) {
+
+    //LOGE("Looking for %s", url);
+
+    // All builtin libraries should be handled here (or moved into a snapshot).
+    if (strcmp(url, "dart:html") == 0) {
+      // Let's load gl.dart from resources
+      const char* gl_source = NULL;
+      openglui::Resources::ResourceLookup("/gl.dart", &gl_source);
+      Dart_Handle source = Dart_NewStringFromCString(gl_source);
+      Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
+      CheckError(Dart_SetNativeResolver(library, ResolveName));
+      return library;
+    }
+    // TODO(nfgs): Create web_gl.dart
+    if (strcmp(url, "dart:web_gl") == 0) {
+      return Dart_Null();
+    }
+    // TODO(nfgs): Create web_audio.dart
+    if (strcmp(url, "dart:web_audio") == 0) {
+      return Dart_Null();
+    }
+
   }
-  // All builtin libraries should be handled here (or moved into a snapshot).
-  if (strcmp(url, "dart:html") == 0) {
-    // Let's load gl.dart from resources
-    const char* gl_source = NULL;
-    openglui::Resources::ResourceLookup("/gl.dart", &gl_source);
-    Dart_Handle source = Dart_NewStringFromCString(gl_source);
-    Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
-    CheckError(Dart_SetNativeResolver(library, ResolveName));
-    return library;
-  }
-  // TODO(nfgs): Create web_gl.dart
-  if (strcmp(url, "dart:web_gl") == 0) {
-    return Dart_Null();
-  }
-  LOGE("UNIMPLEMENTED: load library %s\n", url);
-  return NULL;
+
+  // Handle 'import' or 'part' requests for all other URIs.
+  return dart::bin::DartUtils::LibraryTagHandler(tag, library, urlHandle);
 }
 
 // Returns true on success, false on failure.
@@ -144,6 +157,59 @@ Dart_Isolate VMGlue::CreateIsolateAndSetupHelper(const char* script_uri,
   Dart_Handle builtin_lib =
       dart::bin::Builtin::LoadAndCheckLibrary(dart::bin::Builtin::kBuiltinLibrary);
   CHECK_RESULT(builtin_lib);
+
+  // Prepare for script loading by setting up the 'print' and 'timer'
+  // closures and setting up 'package root' for URI resolution.
+  //CheckError(dart::bin::DartUtils::PrepareForScriptLoading(package_root, builtin_lib));
+  
+  // Setup the internal library's 'internalPrint' function.
+  Dart_Handle internal_lib =
+      Dart_LookupLibrary(Dart_NewStringFromCString("dart:_collection-dev"));
+  CHECK_RESULT(internal_lib);
+  Dart_Handle print = Dart_Invoke(
+      builtin_lib, Dart_NewStringFromCString("_getPrintClosure"), 0, NULL);
+  result = Dart_SetField(internal_lib,
+                                     Dart_NewStringFromCString("_printClosure"),
+                                     print);
+  CHECK_RESULT(result);
+
+  // Setup the 'timer' factory.
+  Dart_Handle url = Dart_NewStringFromCString(dart::bin::DartUtils::kAsyncLibURL);
+  CHECK_RESULT(url);
+  Dart_Handle async_lib = Dart_LookupLibrary(url);
+  CHECK_RESULT(async_lib);
+  Dart_Handle io_lib = dart::bin::Builtin::LoadAndCheckLibrary(dart::bin::Builtin::kIOLibrary);
+  Dart_Handle timer_closure =
+      Dart_Invoke(io_lib, Dart_NewStringFromCString("_getTimerFactoryClosure"), 0, NULL);
+  Dart_Handle args[1];
+  args[0] = timer_closure;
+  CHECK_RESULT(Dart_Invoke(
+      async_lib, Dart_NewStringFromCString("_setTimerFactoryClosure"), 1, args));
+
+  // Begin DartUtils::PrepareForScriptLoading
+  // Setup the corelib 'Uri.base' getter.
+  Dart_Handle corelib = Dart_LookupLibrary(Dart_NewStringFromCString("dart:core"));
+  CHECK_RESULT(corelib);
+  Dart_Handle uri_base = Dart_Invoke(
+      builtin_lib, Dart_NewStringFromCString("_getUriBaseClosure"), 0, NULL);
+  CHECK_RESULT(uri_base);
+  result = Dart_SetField(corelib,
+                         Dart_NewStringFromCString("_uriBaseClosure"),
+                         uri_base);
+  CHECK_RESULT(result);
+
+  // Set working directory
+  char * dir = dart::bin::Directory::Current();
+  LOGE("Setting working directory to %s", dir);
+  Dart_Handle directory = Dart_NewStringFromCString(dir);
+  Dart_Handle dart_args[1];
+  dart_args[0] = directory;
+  Dart_Invoke(builtin_lib, Dart_NewStringFromCString("_setWorkingDirectory"), 1, dart_args);
+
+  // End DartUtils::PrepareForScriptLoading
+
+  // This will set _entryPointScript which is needed for imports to work
+  dart::bin::DartUtils::ResolveScriptUri(Dart_NewStringFromCString(script_uri), builtin_lib);
 
   Dart_ExitScope();
   return isolate;
@@ -299,6 +365,7 @@ int VMGlue::StartMainIsolate() {
   Dart_Handle source = LoadSourceFromFile(main_script_);
   CheckError(Dart_LoadScript(url, source, 0, 0));
 
+  //Platform::SetPackageRoot(package_root);
   Dart_Handle io_lib_url = Dart_NewStringFromCString("dart:io");
   Dart_Handle io_lib = Dart_LookupLibrary(io_lib_url);
   CheckError(io_lib);
@@ -338,22 +405,36 @@ int VMGlue::CallSetup(bool force) {
         surface_->width(), surface_->height(), setup_flag_);
     Dart_EnterIsolate(isolate_);
     Dart_EnterScope();
-    Dart_Handle args[3];
-    args[0] = CheckError(Dart_NewInteger(surface_->width()));
-    args[1] = CheckError(Dart_NewInteger(surface_->height()));
-    args[2] = CheckError(Dart_NewInteger(setup_flag_));
-    int rtn = Invoke("main", 3, args);
 
-    if (rtn == 0) {
-      // Plug in the print handler. It would be nice if we could do this
-      // before calling setup, but the call to GetField blows up if we
-      // haven't run anything yet.
-      //Dart_Handle library = CheckError(Dart_LookupLibrary(
-      //    Dart_NewStringFromCString("gl.dart")));
-      //Dart_Handle print = Dart_GetField(library, Dart_NewStringFromCString("_printClosure"));
-      //CheckError(print);
+    Dart_Handle library = Dart_RootLibrary();
+    Dart_Handle window = Dart_GetField(library, Dart_NewStringFromCString("window"));
+
+    // set window.innerWidth
+    CheckError(Dart_SetField(window,
+                         Dart_NewStringFromCString("innerWidth"),
+                         Dart_NewInteger(surface_->width())));
+
+    // set window.innerHeight
+    CheckError(Dart_SetField(window,
+                         Dart_NewStringFromCString("innerHeight"),
+                         Dart_NewInteger(surface_->height())));
+
+    Dart_Handle args[1];
+    args[0] = Dart_NewList(0);
+
+    // First try with 1 argument.
+    int rtn = Invoke("main", 1, args);
+
+    if (rtn == -1) {
+      // Finally try with 0 arguments.
+      rtn = Invoke("main", 0, NULL);
     }
+
+    // Processes any incoming messages for the current isolate.
+    Dart_RunLoop();
+
     Dart_ExitScope();
+
     Dart_ExitIsolate();
     LOGI("Done setup");
     return rtn;
@@ -379,9 +460,15 @@ int VMGlue::CallUpdate() {
     }
     Dart_EnterScope();
     int rtn = Invoke("update_", 0, 0);
+
+    // Process any incoming messages for the current isolate.
+    Dart_RunLoop();
+
     Dart_ExitScope();
+
     Dart_ExitIsolate();
     LOGI("Invoke update_ returns %d", rtn);
+
     return rtn;
   }
   return -1;
@@ -462,14 +549,6 @@ int VMGlue::Invoke(const char* function,
     if (failIfNotDefined) {
       return -1;
     }
-  }
-
-  // TODO(vsm): I don't think we need this.
-  // Keep handling messages until the last active receive port is closed.
-  result = Dart_RunLoop();
-  if (Dart_IsError(result)) {
-    LOGE("Dart_RunLoop: %s\n", Dart_GetError(result));
-    return -1;
   }
 
   return 0;
