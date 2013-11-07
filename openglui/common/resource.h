@@ -55,5 +55,7 @@ class Resource {
     off_t length_;
 };
 
+extern Resource* MakePlatformResource(const char *path);
+
 #endif  // OPENGLUI_COMMON_RESOURCE_H_
 

@@ -7,8 +7,6 @@
 
 #include "openglui/common/resource.h"
 
-extern Resource* MakePlatformResource(const char *path);
-
 class Sample {
   public:
     explicit Sample(const char* path)

@@ -9,7 +9,6 @@
     'skia_build_flag' : '--release',
     'skia_libs_location_android': '-Lthird_party/skia/out/config/android-arm/Release/obj.target/gyp', 
     'skia_libs_location_desktop': '-Lthird_party/skia/out/Release',
-    'gl_dart_file': 'openglui/common/gl.dart',
     'gl_resources_cc_file': '<(SHARED_INTERMEDIATE_DIR)/gl_resources_gen.cc',
   },
   'conditions': [
@@ -335,7 +334,9 @@
       'type': 'none',
       'toolsets':['host'],
       'sources': [
-        '<(gl_dart_file)',
+        'openglui/common/html.dart',
+        'openglui/common/web_gl.dart',
+        'openglui/common/web_audio.dart',
       ],
       'actions': [
         {

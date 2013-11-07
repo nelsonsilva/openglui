@@ -8,6 +8,7 @@
 #include <string.h>
 #include "core/SkStream.h"
 #include "openglui/common/canvas_context.h"
+#include "openglui/common/resource.h"
 
 ImageCache* ImageCache::instance_ = NULL;
 
@@ -47,49 +48,29 @@ int ImageCache::GetHeight_(const char* src_url) {
 
 SkBitmap* ImageCache::Load(const char* src_url) {
   SkBitmap *bm = NULL;
-  const char* filepath;
-  if (strncmp(src_url, "file://", 7) == 0) {
-    filepath = src_url + 7;
-  } else {
-    // TODO(gram): We need a way to remap URLs to local file names.
-    // For now I am just using the characters after the last '/'.
-    // Note also that if we want to support URLs and network fetches,
-    // then we introduce more complexity; this can't just be an URL.
-    int pos = strlen(src_url);
-    while (--pos >= 0 && src_url[pos] != '/');
-    filepath = src_url + pos + 1;
+  Resource* resource = MakePlatformResource(src_url);
+  if (resource->Open() != 0) {
+    LOGE("Image not found at: %s\n", src_url);
+    return NULL;
   }
-  char* path;
-  if (filepath[0] == '/') {
-    path = const_cast<char*>(filepath);
+  size_t length;
+  char* buffer = new char[length = resource->length()];
+  resource->Read(buffer, length);
+  resource->Close();
+
+  SkMemoryStream stream(buffer, length, false);
+  // We could use DecodeFile and pass the path, but by creating the
+  // SkStream here we can produce better error log messages.
+  bm = new SkBitmap();
+  if (!SkImageDecoder::DecodeStream(&stream, bm)) {
+    LOGE("Image decode of %s failed", src_url);
+    return NULL;
   } else {
-    size_t len1 = strlen(resource_path_);
-    size_t len2 = strlen(filepath);
-    path = new char[len1 + 1 + len2 + 1];
-    strncpy(path, resource_path_, len1+1);
-    strncat(path, "/", 1);
-    strncat(path, filepath, len2);
+    LOGI("Decode image %s: width=%d,height=%d",
+        src_url, bm->width(), bm->height());
   }
 
-  SkFILEStream stream(path);
-  if (stream.isValid()) {
-    // We could use DecodeFile and pass the path, but by creating the
-    // SkStream here we can produce better error log messages.
-    bm = new SkBitmap();
-    if (!SkImageDecoder::DecodeStream(&stream, bm)) {
-      LOGE("Image decode of %s failed", path);
-      return NULL;
-    } else {
-      LOGI("Decode image %s: width=%d,height=%d",
-          path, bm->width(), bm->height());
-    }
-  } else {
-    LOGE("Path %s is invalid", path);
-  }
-
-  if (path != filepath) {
-    delete[] path;
-  }
+  delete[] buffer;
   return bm;
 }
 

@@ -20,7 +20,7 @@ Resource* MakePlatformResource(const char *path) {
 void android_main(android_app* application) {
   application_ = application;
   app_dummy();  // Link in native_app_glue.
-  const char* resource_path = "/data/data/com.google.dartndk/app_dart";
+  const char* resource_path = "";
   EventLoop eventLoop(application);
   AndroidGraphicsHandler graphics_handler(application, resource_path);
   VMGlue vm_glue(&graphics_handler, resource_path);

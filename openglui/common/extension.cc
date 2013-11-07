@@ -269,6 +269,55 @@ void GLBindBuffer(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+void GLBlendEquation(Dart_NativeArguments arguments) {
+  LOGI("GLBlendEquation");
+  Dart_EnterScope();
+
+  int64_t mode = GetArgAsInt(arguments, 0);
+
+  glBlendEquation(mode);
+  CheckGLError("GLBlendEquation");
+  Dart_ExitScope();
+}
+
+void GLBlendEquationSeparate(Dart_NativeArguments arguments) {
+  LOGI("GLBlendEquationSeparate");
+  Dart_EnterScope();
+
+  int64_t modeRGB = GetArgAsInt(arguments, 0);
+  int64_t modeAlpha = GetArgAsInt(arguments, 1);
+
+  glBlendEquationSeparate(modeRGB, modeAlpha);
+  CheckGLError("GLBlendEquationSeparate");
+  Dart_ExitScope();
+}
+
+void GLBlendFunc(Dart_NativeArguments arguments) {
+  LOGI("GLBlendFunc");
+  Dart_EnterScope();
+
+  int64_t sfactor = GetArgAsInt(arguments, 0);
+  int64_t dfactor = GetArgAsInt(arguments, 1);
+
+  glBlendFunc(sfactor, dfactor);
+  CheckGLError("GLBlendFunc");
+  Dart_ExitScope();
+}
+
+void GLBlendFuncSeparate(Dart_NativeArguments arguments) {
+  LOGI("glBlendFuncSeparate");
+  Dart_EnterScope();
+
+  int64_t srcRGB = GetArgAsInt(arguments, 0);
+  int64_t dstRGB = GetArgAsInt(arguments, 1);
+  int64_t srcAlpha = GetArgAsInt(arguments, 2);
+  int64_t dstAlpha = GetArgAsInt(arguments, 3);
+
+  glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+  CheckGLError("glBlendFuncSeparate");
+  Dart_ExitScope();
+}
+
 void GLBufferData(Dart_NativeArguments arguments) {
   LOGI("GLBufferData");
   Dart_EnterScope();
@@ -339,6 +388,42 @@ void GLCreateShader(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+void GLDeleteShader(Dart_NativeArguments arguments) {
+  LOGI("GLDeleteShader");
+  Dart_EnterScope();
+  int64_t shader = GetArgAsInt(arguments, 0);
+  glDeleteShader(shader);
+  CheckGLError("GLDeleteShader");
+  Dart_ExitScope();
+}
+
+void GLCullFace(Dart_NativeArguments arguments) {
+  LOGI("GLCullFace");
+  Dart_EnterScope();
+  int64_t mode = GetArgAsInt(arguments, 0);
+  glCullFace(mode);
+  CheckGLError("GLCullFace");
+  Dart_ExitScope();
+}
+
+void GLDepthMask(Dart_NativeArguments arguments) {
+  LOGI("GLDepthMask");
+  Dart_EnterScope();
+  bool flag = GetArgAsBool(arguments, 0);
+  glDepthMask(flag ? GL_TRUE : GL_FALSE);
+  CheckGLError("GLDepthMask");
+  Dart_ExitScope();
+}
+
+void GLDepthFunc(Dart_NativeArguments arguments) {
+  LOGI("GLDepthFunc");
+  Dart_EnterScope();
+  int64_t func = GetArgAsInt(arguments, 0);
+  glDepthFunc(func);
+  CheckGLError("GLDepthFunc");
+  Dart_ExitScope();
+}
+
 void GLDrawArrays(Dart_NativeArguments arguments) {
   LOGI("GLDrawArrays");
   Dart_EnterScope();
@@ -354,6 +439,45 @@ void GLDrawArrays(Dart_NativeArguments arguments) {
   LOGI("Done GLDrawArrays");
 }
 
+void GLDrawElements(Dart_NativeArguments arguments) {
+  LOGI("GLDrawElements");
+  Dart_EnterScope();
+
+  int64_t mode = GetArgAsInt(arguments, 0);
+  int64_t count = GetArgAsInt(arguments, 1);
+  int64_t type = GetArgAsInt(arguments, 2);
+  int64_t offset = GetArgAsInt(arguments, 3);
+  LOGI("GLDrawElements(%ld, %ld, %ld, %ld)", mode, count, type, offset);
+  
+  glDrawElements(mode, count, type, (GLvoid*) offset);
+  CheckGLError("glDrawElements");
+  display_context->makeDirty();
+  Dart_ExitScope();
+  LOGI("Done GLDrawElements");
+}
+
+void GLDisable(Dart_NativeArguments arguments) {
+  LOGI("GLDisable");
+  Dart_EnterScope();
+
+  int64_t cap = GetArgAsInt(arguments, 0);
+
+  glDisable(cap);
+  CheckGLError("GLDisable");
+  Dart_ExitScope();
+}
+
+void GLEnable(Dart_NativeArguments arguments) {
+  LOGI("GLEnable");
+  Dart_EnterScope();
+
+  int64_t cap = GetArgAsInt(arguments, 0);
+
+  glEnable(cap);
+  CheckGLError("GLEnable");
+  Dart_ExitScope();
+}
+
 void GLEnableVertexAttribArray(Dart_NativeArguments arguments) {
   LOGI("GLEnableVertexAttribArray");
   Dart_EnterScope();
@@ -362,6 +486,28 @@ void GLEnableVertexAttribArray(Dart_NativeArguments arguments) {
 
   glEnableVertexAttribArray(location);
   CheckGLError("glEnableVertexAttribArray");
+  Dart_ExitScope();
+}
+
+void GLDisableVertexAttribArray(Dart_NativeArguments arguments) {
+  LOGI("GLDisableVertexAttribArray");
+  Dart_EnterScope();
+
+  int64_t location = GetArgAsInt(arguments, 0);
+
+  glDisableVertexAttribArray(location);
+  CheckGLError("glEnableVertexAttribArray");
+  Dart_ExitScope();
+}
+
+void GLFrontFace(Dart_NativeArguments arguments) {
+  LOGI("GLFrontFace");
+  Dart_EnterScope();
+
+  int64_t mode = GetArgAsInt(arguments, 0);
+
+  glFrontFace(mode);
+  CheckGLError("GLFrontFace");
   Dart_ExitScope();
 }
 
@@ -389,6 +535,39 @@ void GLGetError(Dart_NativeArguments arguments) {
   LOGI("GLGetError");
   Dart_EnterScope();
   SetIntReturnValue(arguments, glGetError());
+  Dart_ExitScope();
+}
+
+void GLGetParameter(Dart_NativeArguments arguments) {
+  LOGI("GLGetParameter");
+  Dart_EnterScope();
+
+  int64_t param = GetArgAsInt(arguments, 0);
+
+  switch (param) {
+    case GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS:
+    case GL_MAX_TEXTURE_IMAGE_UNITS:
+    case GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS:
+    case GL_MAX_CUBE_MAP_TEXTURE_SIZE:
+    case GL_MAX_VARYING_VECTORS:
+    case GL_MAX_VERTEX_ATTRIBS:
+    case GL_MAX_VERTEX_UNIFORM_VECTORS:
+    case GL_MAX_FRAGMENT_UNIFORM_VECTORS:
+    case GL_MAX_TEXTURE_SIZE:
+      GLint num;
+      glGetIntegerv(param, &num);
+      SetIntReturnValue(arguments, num);
+      break;
+    case GL_COMPRESSED_TEXTURE_FORMATS:
+      // TODO(nfgs)
+      break;
+    default:
+      const GLubyte * str = glGetString(param);
+      SetStringReturnValue(arguments, (const char *) str);
+      break;
+  }
+
+  CheckGLError("GLGetParameter");
   Dart_ExitScope();
 }
 
@@ -437,6 +616,28 @@ void GLGetShaderInfoLog(Dart_NativeArguments arguments) {
   SetStringReturnValue(arguments, strInfoLog);
   Dart_ExitScope();
   delete[] strInfoLog;
+}
+
+void GLGetShaderPrecisionFormat(Dart_NativeArguments arguments) {
+  LOGI("GLGetShaderPrecisionFormat");
+  Dart_EnterScope();
+
+  int64_t shaderType = GetArgAsInt(arguments, 0);
+  int64_t precisionType = GetArgAsInt(arguments, 1);
+
+  GLint range[2];
+  GLint precision;
+
+  glGetShaderPrecisionFormat(shaderType, precisionType, range, &precision);
+  CheckGLError("GLGetShaderPrecisionFormat");
+
+  Dart_Handle result = Dart_NewList(3);
+  Dart_ListSetAt(result, 0, Dart_NewInteger(precision));
+  Dart_ListSetAt(result, 1, Dart_NewInteger(range[0]));
+  Dart_ListSetAt(result, 2, Dart_NewInteger(range[1]));
+
+  Dart_SetReturnValue(arguments, result);
+  Dart_ExitScope();
 }
 
 void GLGetProgramInfoLog(Dart_NativeArguments arguments) {
@@ -720,6 +921,48 @@ void GLUniform4fv(Dart_NativeArguments arguments) {
     delete [] list;
     CheckGLError("glUniform4fv");
   }
+  Dart_ExitScope();
+}
+
+void GLUniformMatrix3fv(Dart_NativeArguments arguments) {
+  LOGI("GLUniformMatrix3fv");
+  Dart_EnterScope();
+  int64_t location = GetArgAsInt(arguments, 0);
+  bool transpose = GetArgAsBool(arguments, 1);
+
+  Dart_Handle array = Dart_GetNativeArgument(arguments, 2);
+  Dart_TypedData_Type type;
+  void* data;
+  intptr_t len;
+  Dart_TypedDataAcquireData(array, &type, &data, &len);
+
+  LOGI("GLUniformMatrix3fv(%ld, %d, %ld)", location, transpose ? GL_TRUE : GL_FALSE, len);
+  glUniformMatrix3fv(location, 1, transpose ? GL_TRUE : GL_FALSE, const_cast<const GLfloat*>(reinterpret_cast<GLfloat*>(data)));
+
+  CheckGLError("GLUniformMatrix3fv");
+
+  Dart_TypedDataReleaseData(array);
+  Dart_ExitScope();
+}
+
+void GLUniformMatrix4fv(Dart_NativeArguments arguments) {
+  LOGI("GLUniformMatrix4fv");
+  Dart_EnterScope();
+  int64_t location = GetArgAsInt(arguments, 0);
+  bool transpose = GetArgAsBool(arguments, 1);
+
+  Dart_Handle array = Dart_GetNativeArgument(arguments, 2);
+  Dart_TypedData_Type type;
+  void* data;
+  intptr_t len;
+  Dart_TypedDataAcquireData(array, &type, &data, &len);
+
+  LOGI("GLUniformMatrix4fv(%ld, %d, %ld)", location, transpose ? GL_TRUE : GL_FALSE, len);
+  glUniformMatrix4fv((GLint) location, 1, transpose ? GL_TRUE : GL_FALSE, const_cast<const GLfloat*>(reinterpret_cast<GLfloat*>(data)));
+
+  CheckGLError("glUniformMatrix4fv");
+
+  Dart_TypedDataReleaseData(array);
   Dart_ExitScope();
 }
 
@@ -1564,6 +1807,10 @@ FunctionLookup function_list[] = {
     {"GetDeviceScreenHeight", GetDeviceScreenHeight},
     {"GLAttachShader", GLAttachShader},
     {"GLBindBuffer", GLBindBuffer},
+    {"GLBlendEquation", GLBlendEquation},
+    {"GLBlendEquationSeparate", GLBlendEquationSeparate},
+    {"GLBlendFunc", GLBlendFunc},
+    {"GLBlendFuncSeparate", GLBlendFuncSeparate},
     {"GLBufferData", GLBufferData},
     {"GLClear", GLClear},
     {"GLClearColor", GLClearColor},
@@ -1572,12 +1819,23 @@ FunctionLookup function_list[] = {
     {"GLCreateBuffer", GLCreateBuffer},
     {"GLCreateProgram", GLCreateProgram},
     {"GLCreateShader", GLCreateShader},
+    {"GLDeleteShader", GLDeleteShader},
+    {"GLCullFace", GLCullFace},
+    {"GLDepthMask", GLDepthMask},
+    {"GLDepthFunc", GLDepthFunc},
     {"GLDrawArrays", GLDrawArrays},
+    {"GLDrawElements", GLDrawElements},
+    {"GLDisable", GLDisable},
+    {"GLEnable", GLEnable},
     {"GLEnableVertexAttribArray", GLEnableVertexAttribArray},
+    {"GLDisableVertexAttribArray", GLDisableVertexAttribArray},
+    {"GLFrontFace", GLFrontFace},
     {"GLGetAttribLocation", GLGetAttribLocation},
     {"GLGetError", GLGetError},
+    {"GLGetParameter", GLGetParameter},
     {"GLGetProgramParameter", GLGetProgramParameter},
     {"GLGetShaderParameter", GLGetShaderParameter},
+    {"GLGetShaderPrecisionFormat", GLGetShaderPrecisionFormat},
     {"GLGetUniformLocation", GLGetUniformLocation},
     {"GLLinkProgram", GLLinkProgram},
     {"GLShaderSource", GLShaderSource},
@@ -1597,6 +1855,8 @@ FunctionLookup function_list[] = {
     {"GLUniform2iv", GLUniform2iv},
     {"GLUniform3iv", GLUniform3iv},
     {"GLUniform4iv", GLUniform4iv},
+    {"GLUniformMatrix3fv", GLUniformMatrix3fv},
+    {"GLUniformMatrix4fv", GLUniformMatrix4fv},
     {"GLUseProgram", GLUseProgram},
     {"GLVertexAttribPointer", GLVertexAttribPointer},
     {"GLViewport", GLViewport},

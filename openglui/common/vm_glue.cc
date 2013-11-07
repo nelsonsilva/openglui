@@ -20,10 +20,13 @@
 #include "openglui/common/extension.h"
 #include "openglui/common/log.h"
 #include "openglui/common/vm_glue.h"
+#include "openglui/common/resource.h"
 #include "openglui/common/resources.h"
 
 #include "include/dart_api.h"
 #include "include/dart_debugger_api.h"
+#include "vm/dart_api_impl.h"
+#include "vm/dart_entry.h"
 
 // Let's reuse dart's builtin stuff
 namespace dart {
@@ -42,6 +45,23 @@ extern const uint8_t* gl_snapshot_buffer;
 bool VMGlue::initialized_vm_ = false;
 
 //static const char* package_root = NULL;
+
+// Store pointers to the Dart functions
+struct RawFunctionLookup {
+  const char* name;
+  void* function;
+};
+
+RawFunctionLookup GL_FUNC[] = {
+   {"update_", NULL},
+   {"onKeyDown_", NULL},
+   {"onKeyUp_", NULL},
+   {"onMouseDown_", NULL},
+   {"onMouseMove_", NULL},
+   {"onMouseUp_", NULL},
+   {"onAccelerometer_", NULL},
+   {NULL, NULL}
+ };
 
 VMGlue::VMGlue(ISized* surface,
                const char* script_path,
@@ -64,9 +84,17 @@ VMGlue::VMGlue(ISized* surface,
   if (main_script == NULL) {
     main_script = "main.dart";
   }
-  size_t len = strlen(script_path) + strlen(main_script) + 2;
-  main_script_ = new char[len];
-  snprintf(main_script_, len, "%s/%s", script_path, main_script);
+  // Do not add the slash if the path is empty
+  if (script_path == NULL || strlen(script_path) == 0) {
+    size_t len = strlen(script_path) + 1;
+    main_script_ = new char[len];
+    strcpy(main_script_, main_script);
+  } else {
+    size_t len = strlen(script_path) + strlen(main_script) + 2;
+    main_script_ = new char[len];
+    snprintf(main_script_, len, "%s/%s", script_path, main_script);
+  }
+  
 }
 
 Dart_Handle VMGlue::CheckError(Dart_Handle handle) {
@@ -99,21 +127,28 @@ Dart_Handle VMGlue::LibraryTagHandler(Dart_LibraryTag tag,
 
     // All builtin libraries should be handled here (or moved into a snapshot).
     if (strcmp(url, "dart:html") == 0) {
-      // Let's load gl.dart from resources
-      const char* gl_source = NULL;
-      openglui::Resources::ResourceLookup("/gl.dart", &gl_source);
-      Dart_Handle source = Dart_NewStringFromCString(gl_source);
+      const char* csource = NULL;
+      openglui::Resources::ResourceLookup("/html.dart", &csource);
+      Dart_Handle source = Dart_NewStringFromCString(csource);
       Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
       CheckError(Dart_SetNativeResolver(library, ResolveName));
       return library;
     }
-    // TODO(nfgs): Create web_gl.dart
     if (strcmp(url, "dart:web_gl") == 0) {
-      return Dart_Null();
+      const char* csource = NULL;
+      openglui::Resources::ResourceLookup("/web_gl.dart", &csource);
+      Dart_Handle source = Dart_NewStringFromCString(csource);
+      Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
+      CheckError(Dart_SetNativeResolver(library, ResolveName));
+      return library;
     }
-    // TODO(nfgs): Create web_audio.dart
     if (strcmp(url, "dart:web_audio") == 0) {
-      return Dart_Null();
+      const char* csource = NULL;
+      openglui::Resources::ResourceLookup("/web_audio.dart", &csource);
+      Dart_Handle source = Dart_NewStringFromCString(csource);
+      Dart_Handle library = CheckError(Dart_LoadLibrary(urlHandle, source));
+      CheckError(Dart_SetNativeResolver(library, ResolveName));
+      return library;
     }
 
   }
@@ -287,25 +322,18 @@ int VMGlue::InitializeVM() {
 }
 
 Dart_Handle VMGlue::LoadSourceFromFile(const char* url) {
-  FILE* file = fopen(url, "r");
-  if (file == NULL) {
-    LOGE("Main script not found at: %s\n", url);
+
+  Resource* resource = MakePlatformResource(url);
+
+  if (resource->Open() != 0) {
+    LOGE("Script not found at: %s\n", url);
     return NULL;
   }
-
-  struct stat sb;
-  int fd = fileno(file);
-  fstat(fd, &sb);
-  int length = sb.st_size;
-  LOGI("Entry file %s is %d bytes.\n", url, length);
-
-  char* buffer = new char[length+1];
-  if (read(fd, buffer, length) < 0) {
-    LOGE("Could not read script %s.\n", url);
-    return NULL;
-  }
-  buffer[length] = 0;
-  fclose(file);
+  off_t length;
+  char* buffer = new char[(length = resource->length()) + 1];
+  resource->Read(buffer, length);
+  buffer[length] = '\0'; // Terminate the string
+  resource->Close();
 
   Dart_Handle contents = CheckError(Dart_NewStringFromCString(buffer));
   delete[] buffer;
@@ -396,6 +424,103 @@ int VMGlue::StartMainIsolate() {
   return 0;
 }
 
+dart::RawFunction *Dart_LookupLibraryFunction(Dart_Handle target,
+                                    Dart_Handle name) {
+  dart::Isolate* isolate = dart::Isolate::Current();
+
+  const dart::String& function_name = dart::Api::UnwrapStringHandle(isolate, name);
+  if (function_name.IsNull()) {
+    return NULL;
+  }
+
+  const dart::Object& obj = dart::Object::Handle(isolate, dart::Api::UnwrapHandle(target));
+  if (obj.IsError()) {
+    return NULL;
+  }
+
+  if (!Dart_IsLibrary(target)) {
+    LOGE("Dart_LookupLibraryFunction expects argument 'target' to be a library.");
+    return NULL;
+  }
+
+  // Check whether class finalization is needed.
+  const dart::Library& lib = dart::Library::Cast(obj);
+
+  return lib.LookupFunctionAllowPrivate(function_name);
+}
+
+Dart_Handle SetupArguments(dart::Isolate* isolate,
+                           int num_args,
+                           Dart_Handle* arguments,
+                           int extra_args,
+                           dart::Array* args) {
+  // Check for malformed arguments in the arguments list.
+  *args = dart::Array::New(num_args + extra_args);
+  dart::Object& arg = dart::Object::Handle(isolate);
+  for (int i = 0; i < num_args; i++) {
+    arg = dart::Api::UnwrapHandle(arguments[i]);
+    args->SetAt((i + extra_args), arg);
+  }
+  return dart::Api::Success();
+}
+
+Dart_Handle Dart_InvokeRawFunction(const char * function_name,
+                       dart::RawFunction *f,
+                       int number_of_arguments,
+                       Dart_Handle* arguments) {
+
+  dart::Isolate* isolate = dart::Isolate::Current();
+
+  const dart::Function& function = dart::Function::Handle(isolate, f);
+  if (function.IsNull()) {
+    return dart::Api::NewError("Dart_InvokeRawFunction did not find top-level function '%s'.",
+                         function_name);
+  }
+  // LookupFunctionAllowPrivate does not check argument arity, so we
+  // do it here.
+  dart::String& error_message = dart::String::Handle();
+  if (!function.AreValidArgumentCounts(number_of_arguments,
+                                       0,
+                                       &error_message)) {
+    return dart::Api::NewError("Dart_InvokeRawFunction wrong argument count for function '%s': %s.",
+                         function_name,
+                         error_message.ToCString());
+  }
+  // Setup args and check for malformed arguments in the arguments list.
+  dart::Array& args = dart::Array::Handle(isolate);
+  Dart_Handle result = SetupArguments(isolate, number_of_arguments, arguments, 0, &args);
+  if (!Dart_IsError(result)) {
+    result = dart::Api::NewHandle(isolate, dart::DartEntry::InvokeFunction(function, args));
+  }
+  return result;
+}
+
+dart::RawFunction * GLLookup(const char* name) {
+  for (int i = 0; GL_FUNC[i].name != NULL; ++i) {
+    if (strcmp(GL_FUNC[i].name, name) == 0) {
+      return (dart::RawFunction *) GL_FUNC[i].function;
+    }
+  }
+  return NULL;
+}
+
+int GLInvoke(const char * function_name, int nargs, Dart_Handle* args, bool failIfNotDefined = true) {
+  dart::RawFunction *function = GLLookup(function_name);
+  if (function == NULL) {
+    return (failIfNotDefined) ? -1 : 0;
+  }
+  Dart_Handle result = Dart_InvokeRawFunction(function_name, function, nargs, args);
+  if (Dart_IsError(result)) {
+    const char* error = Dart_GetError(result);
+    LOGE("Invoke failed: %s", error);
+    if (failIfNotDefined) {
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
 int VMGlue::CallSetup(bool force) {
   // TODO(gram): See if we actually need this flag guard here, or if
   // we can eliminate it along with the need for the force parameter.
@@ -406,8 +531,15 @@ int VMGlue::CallSetup(bool force) {
     Dart_EnterIsolate(isolate_);
     Dart_EnterScope();
 
-    Dart_Handle library = Dart_RootLibrary();
-    Dart_Handle window = Dart_GetField(library, Dart_NewStringFromCString("window"));
+    Dart_Handle htmllib = Dart_LookupLibrary(Dart_NewStringFromCString("dart:html"));
+
+    // Lookup the functions
+    for (int i = 0; GL_FUNC[i].name != NULL; ++i) {
+      LOGI("Looking up %s", GL_FUNC[i].name);
+      GL_FUNC[i].function = Dart_LookupLibraryFunction(htmllib, Dart_NewStringFromCString(GL_FUNC[i].name));
+    }
+
+    Dart_Handle window = Dart_GetField(htmllib, Dart_NewStringFromCString("window"));
 
     // set window.innerWidth
     CheckError(Dart_SetField(window,
@@ -454,12 +586,12 @@ int VMGlue::CallUpdate() {
       args[0] = CheckError(Dart_NewDouble(x_));
       args[1] = CheckError(Dart_NewDouble(y_));
       args[2] = CheckError(Dart_NewDouble(z_));
-      Invoke("onAccelerometer", 3, args, false);
+      GLInvoke("onAccelerometer_", 3, args);
       Dart_ExitScope();
       accelerometer_changed_ = false;
     }
     Dart_EnterScope();
-    int rtn = Invoke("update_", 0, 0);
+    int rtn = GLInvoke("update_", 0, 0); 
 
     // Process any incoming messages for the current isolate.
     Dart_RunLoop();
@@ -478,7 +610,7 @@ int VMGlue::CallShutdown() {
   if (initialized_script_) {
     Dart_EnterIsolate(isolate_);
     Dart_EnterScope();
-    int rtn = Invoke("shutdown", 0, 0);
+    int rtn = GLInvoke("shutdown", 0, 0);
     Dart_ExitScope();
     Dart_ExitIsolate();
     return rtn;
@@ -496,7 +628,7 @@ int VMGlue::OnMotionEvent(const char* pFunction, int64_t pWhen,
     args[0] = CheckError(Dart_NewInteger(pWhen));
     args[1] = CheckError(Dart_NewDouble(pMoveX));
     args[2] = CheckError(Dart_NewDouble(pMoveY));
-    int rtn = Invoke(pFunction, 3, args, false);
+    int rtn = GLInvoke(pFunction, 3, args);
     Dart_ExitScope();
     Dart_ExitIsolate();
     LOGI("Done %s", pFunction);
@@ -519,7 +651,7 @@ int VMGlue::OnKeyEvent(const char* function, int64_t when, int32_t key_code,
     args[3] = CheckError(Dart_NewBoolean(isCtrlKeyDown));
     args[4] = CheckError(Dart_NewBoolean(isShiftKeyDown));
     args[5] = CheckError(Dart_NewInteger(repeat));
-    int rtn = Invoke(function, 6, args, false);
+    int rtn = GLInvoke(function, 6, args);
     Dart_ExitScope();
     Dart_ExitIsolate();
     LOGI("Done %s", function);
