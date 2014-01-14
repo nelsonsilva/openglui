@@ -1,15 +1,15 @@
 vars = {
   "dart_url": "http://dart.googlecode.com/svn",
   "dart_branch": "/trunk",
-  "dart_rev": "@29656", # 0.8.9.0
+  "dart_rev": "@30939", # 1.0.3.0
   
   "chromium_url": "http://src.chromium.org/svn",
   "chromium_git": "http://git.chromium.org/git",
 
   "gyp_rev": "@1752",
-  "nss_rev": "@209026",
+  "nss_rev": "@232552",
 
-  "co19_rev": "@623",
+  "co19_rev": "@672",
   "co19_repo": "http://co19.googlecode.com/svn/trunk/co19/",
 
   "bootstrap_css_rev" : "@28387",
@@ -41,11 +41,9 @@ deps = {
       Var("chromium_url") + "/trunk/src/net/third_party/nss" + Var("nss_rev"),
 
   # vm service resources
-  "openglui/third_party/dart/runtime/bin/vmservice/client/bootstrap_css":
-      Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
   "openglui/third_party/dart/runtime/bin/vmservice/client/web/bootstrap_css":
       Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
-  "openglui/third_party/dart/runtime/bin/vmservice/client/out/web/bootstrap_css":
+  "openglui/third_party/dart/runtime/bin/vmservice/client/deployed/web/bootstrap_css":
       Var("dart_url") + "/third_party/bootstrap_css" + Var("bootstrap_css_rev"),
 
   # skia standalone (http://skia.googlecode.com/svn/trunk/DEPS)

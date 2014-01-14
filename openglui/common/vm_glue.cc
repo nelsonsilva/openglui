@@ -300,7 +300,7 @@ static void closeFileCallback(void* file) {
 int VMGlue::InitializeVM() {
   // We need the next call to get Dart_Initialize not to bail early.
   LOGI("Setting VM Options");
-  Dart_SetVMFlags(sizeof(VM_FLAGS) / sizeof(VM_FLAGS[0]), VM_FLAGS);
+  Dart_SetVMFlags( (int) (sizeof(VM_FLAGS) / sizeof(VM_FLAGS[0])), VM_FLAGS);
 
   // Initialize the Dart VM, providing the callbacks to use for
   // creating and shutting down isolates.
@@ -312,7 +312,8 @@ int VMGlue::InitializeVM() {
                        openFileCallback,
                        readFileCallback,
                        writeFileCallback,
-                       closeFileCallback)) {
+                       closeFileCallback,
+                       dart::bin::DartUtils::EntropySource)) {
     LOGE("VM initialization failed\n");
     return -1;
   }
