@@ -79,7 +79,7 @@ deps_os = {
     # dart (https://code.google.com/p/dart/source/browse/trunk/deps/all.deps/DEPS)
     "openglui/third_party/android_tools":
       Var("chromium_git") + "/android_tools.git" +
-      "@ebd740fc3d55dda34d9322c8c5f7749302734325",
+      "@b3b75e0951a2fcb8380d5f74144ec34a654ce6b2",
   },
 }
 
