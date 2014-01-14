@@ -200,7 +200,6 @@ void EventLoop::Run(LifeCycleHandler* lifecycle_handler,
       if (enabled_ && !quit_) {
         int64_t now = getTimeInMillis();
         if (now >= next_frame_time) {
-          LOGI("step");
           last_frame_time = now;
           if (lifecycle_handler_->OnStep() != 0) {
             quit_ = true;
@@ -225,10 +224,13 @@ void EventLoop::EnableSensorEvents() {
     sensor_ = ASensorManager_getDefaultSensor(sensor_manager_,
         ASENSOR_TYPE_ACCELEROMETER);
     if (sensor_ != NULL) {
+      // TODO - Check if we can we the min delay
       int32_t min_delay = ASensor_getMinDelay(sensor_);
+      // Limit to 60 events per second (in us).
+      int32_t delay = (1000L/60)*1000;
       if (ASensorEventQueue_enableSensor(sensor_event_queue_, sensor_) < 0 ||
           ASensorEventQueue_setEventRate(sensor_event_queue_, sensor_,
-              min_delay) < 0) {
+        		  delay) < 0) {
         LOGE("Error while activating sensor.");
         DisableSensorEvents();
         return;
@@ -238,6 +240,7 @@ void EventLoop::EnableSensorEvents() {
       LOGI("Vendor     : %s", ASensor_getVendor(sensor_));
       LOGI("Resolution : %f", ASensor_getResolution(sensor_));
       LOGI("Min Delay  : %d", min_delay);
+      LOGI("Delay  : %d", delay);
     } else {
       LOGI("No sensor");
     }
