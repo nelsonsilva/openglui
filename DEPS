@@ -15,7 +15,7 @@ vars = {
   "bootstrap_css_rev" : "@28387",
 
   "skia_branch": "/trunk",
-  "skia_rev": "@11999",
+  "skia_rev": "@13063",
 }
 
 deps = {
@@ -48,10 +48,10 @@ deps = {
 
   # skia standalone (http://skia.googlecode.com/svn/trunk/DEPS)
   "openglui/third_party/skia" : "http://skia.googlecode.com/svn" + Var("skia_branch") + Var("skia_rev"),
-  "openglui/third_party/skia/third_party/externals/angle" : "https://chromium.googlesource.com/external/angleproject.git@e574e26f48223a6718feab841b4a7720785b497a",
+  "openglui/third_party/skia/third_party/externals/angle" : "https://chromium.googlesource.com/external/angleproject.git",
   "openglui/third_party/skia/third_party/externals/fontconfig" : "https://skia.googlesource.com/third_party/fontconfig.git@2.10.93",
   "openglui/third_party/skia/third_party/externals/freetype" : "https://skia.googlesource.com/third_party/freetype2.git@VER-2-5-0-1",
-  "openglui/third_party/skia/third_party/externals/gyp" : "https://chromium.googlesource.com/external/gyp.git@0635a6e266eb4cdd01e942331997f76b3737be79",
+  "openglui/third_party/skia/third_party/externals/gyp" : "https://chromium.googlesource.com/external/gyp.git@5917c6a6b77c9e97a0cbb66847194381bd36ec4c",
   "openglui/third_party/skia/third_party/externals/iconv" : "https://skia.googlesource.com/third_party/libiconv.git@v1.14",
   "openglui/third_party/skia/third_party/externals/libjpeg" : "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git@82ce8a6d4ebe12a177c0c3597192f2b4f09e81c3",
   "openglui/third_party/skia/third_party/externals/jsoncpp" : "https://chromium.googlesource.com/external/jsoncpp/jsoncpp.git@ab1e40f3bce061ea6f9bdc60351d6cde2a4f872b",
