@@ -161,7 +161,7 @@ def SetCrossCompilationEnvironment(host_os, target_os, target_arch, old_path):
     toolchain_arch = 'arm-linux-androideabi-4.6'
   else:
     toolchain_arch = 'x86-4.4.3'
-  toolchain_dir = 'linux-x86'
+  toolchain_dir = 'linux-x86_64'
   android_toolchain = os.path.join(android_ndk_root,
       'toolchains', toolchain_arch,
       'prebuilt', toolchain_dir, 'bin')
@@ -169,7 +169,7 @@ def SetCrossCompilationEnvironment(host_os, target_os, target_arch, old_path):
 
   os.environ['ANDROID_TOOLCHAIN'] = android_toolchain
 
-  android_sdk_version = 14
+  android_sdk_version = 19
 
   android_sdk_tools = os.path.join(android_sdk_root, 'tools')
   CheckDirExists(android_sdk_tools, 'Android SDK tools')
@@ -437,7 +437,7 @@ def Main():
               toolchainprefix = ('%s/arm-linux-androideabi' % os.environ['ANDROID_TOOLCHAIN'])
 
 
-            sysroot = os.environ['ANDROID_NDK_ROOT'] + "/platforms/android-14/arch-arm";
+            sysroot = os.environ['ANDROID_NDK_ROOT'] + "/platforms/android-19/arch-arm";
             args.append(  "CFLAGS=--sysroot=" + sysroot)
             args.append(  "CXXFLAGS=-Ithird_party/dart/third_party/android_tools/ndk/sources/cxx-stl/stlport/stlport/ --sysroot=" + sysroot)
             args.append(  "LDFLAGS=--sysroot=" + sysroot)
